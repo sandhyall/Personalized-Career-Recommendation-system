@@ -32,7 +32,7 @@ const Navbar = () => {
             Contact
           </Link>
 
-          <div className="flex items-center space-x-3 ml-4">
+          <div className="justify-end items-end space-x-3 ml-4">
             <Link
               to="/login"
               className="px-5 py-2 border hover:bg-indigo-700 border-black font-bold text-black rounded-lg hover:bg-black-50 transition"

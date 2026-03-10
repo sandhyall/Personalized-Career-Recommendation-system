@@ -26,13 +26,13 @@ const HeroSection = () => {
           <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
             <Link
               to="/get-started"
-              className="w-full sm:w-auto px-8 py-4 bg-slate-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 hover:bg-[#2563EB] hover:-translate-y-0.5 transition-all duration-200"
+              className="w-full sm:w-auto px-8 py-4 bg-slate-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 hover:bg-[#2563EB] hover:-translate-y-0.5 transition-all duration-200 whitespace-nowrap"
             >
               Find My Career Path
             </Link>
             <Link
               to="/how-it-works"
-              className="w-full sm:w-auto px-8 py-4 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors"
+              className="w-full sm:w-auto px-8 py-4 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors  whitespace-nowrap"
             >
               View Case Studies
             </Link>
