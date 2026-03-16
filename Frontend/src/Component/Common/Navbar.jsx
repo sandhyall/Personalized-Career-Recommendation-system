@@ -1,17 +1,15 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import logo from "../../assets/image.png";
 
 const Navbar = () => {
   return (
     <header className="bg-amber-50 shadow-sm sticky top-0 z-50">
       <nav className="container mx-auto flex items-center justify-between py-4 px-6">
-        <Link
-          to="/"
-          className="text-2xl font-extrabold text-gray-700  hover:text-indigo-800 transition-colors"
-        >
-          Sandhya.
+        <Link to="/" className="flex items-center">
+          {" "}
+          <img src={logo} alt="logo" className="h-14 w-auto" />{" "}
         </Link>
-
         <div className="hidden md:flex items-center space-x-8">
           <Link
             to="/"
