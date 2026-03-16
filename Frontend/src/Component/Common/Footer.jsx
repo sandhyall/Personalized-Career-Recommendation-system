@@ -1,5 +1,6 @@
 import React from "react";
-import { Mail, Linkedin, Twitter, Target } from "lucide-react";
+import { Mail, Linkedin, Twitter } from "lucide-react";
+import logo from "../../assets/image.png";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -9,8 +10,7 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
         <div className="space-y-4">
           <div className="flex items-center gap-2 text-white font-bold text-xl">
-            <Target className="text-blue-500" />
-            <span>Sandhya</span>
+            <img src={logo} alt="" className="h-14 w-auto" />
           </div>
           <p className="text-sm leading-relaxed">
             Personalized career roadmaps powered by AI. Navigate your

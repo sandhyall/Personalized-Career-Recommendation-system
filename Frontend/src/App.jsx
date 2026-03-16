@@ -9,6 +9,9 @@ import ProtectRoute from "./Component/ProtectRoute/Protectroute";
 import AdminDahboard from "./Component/Dashboard/AdminDahboard";
 import DashboardOverview from "./Component/Dashboard/DashboardOverview";
 import CareerDashboard from "./Component/Dashboard/CarrerDahbord";
+import About from "./Pages/About";
+import Contactus from "./Pages/Contactus";
+
 
 const App = () => {
   return (
@@ -19,12 +22,14 @@ const App = () => {
             <Route index element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/about" element={<About/>}/>
+            <Route path="/contact" element={<Contactus/>}/>
           </Route>
           <Route path="/adminlogin" element={<AdminLogin />} />
           <Route
             path="/admin"
             element={
-              // <ProtectRoute>
+              //  <ProtectRoute>
                 <AdminDahboard />
               // </ProtectRoute>
             }
