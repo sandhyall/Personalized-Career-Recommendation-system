@@ -1,21 +1,36 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+
+const apiUrl = import.meta.env.VITE_SERVER;
 
 const Login = () => {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     email: "",
     password: "",
   });
+  const [serverError, setServerError] = useState("");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prevForm) => ({ ...prevForm, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log("Login Form Submitted:", form);
+    try {
+      const res = await axios.post(`${apiUrl}/login`, {
+        email: form.email,
+        password: form.password,
+      });
+
+      alert(res.data.message);
+      navigate("/");
+    } catch (error) {
+      setServerError(error.response?.data?.message || "Something went wrong");
+    }
 
     setForm({
       email: "",
@@ -24,7 +39,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center  p-6">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-gray-100">
       <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
           Login to Your Account
@@ -60,6 +75,10 @@ const Login = () => {
               required
             />
           </div>
+
+          {serverError && (
+            <p className="text-red-500 text-sm mt-2">{serverError}</p>
+          )}
 
           <button
             type="submit"

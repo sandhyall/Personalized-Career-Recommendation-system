@@ -1,6 +1,12 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+
+const apiUrl = import.meta.env.VITE_SERVER;
 
 const Register = () => {
+  const navigate = useNavigate();
+  const [serverError, setServerError] = useState("");
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -13,7 +19,7 @@ const Register = () => {
     setForm((prevForm) => ({ ...prevForm, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (form.password !== form.confirmPassword) {
@@ -21,9 +27,19 @@ const Register = () => {
       return;
     }
 
-    console.log("Form Submitted Successfully:", form);
+    try {
+      const res = await axios.post(`${apiUrl}/register`, {
+        name: form.fullName,
+        email: form.email,
+        password: form.password,
+      });
 
-   
+      alert(res.data.message);
+      navigate("/login");
+    } catch (error) {
+      setServerError(error.response?.data?.message || "Something went wrong");
+    }
+
     setForm({
       fullName: "",
       email: "",
@@ -33,7 +49,7 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-gray-100">
       <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
           Create an Account
@@ -99,6 +115,10 @@ const Register = () => {
               required
             />
           </div>
+
+          {serverError && (
+            <p className="text-red-500 text-sm mt-2">{serverError}</p>
+          )}
 
           <button
             type="submit"
