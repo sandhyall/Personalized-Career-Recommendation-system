@@ -13,7 +13,7 @@ const Footer = () => {
             <img src={logo} alt="" className="h-14 w-auto" />
           </div>
           <p className="text-sm leading-relaxed">
-            Personalized career roadmaps powered by AI. Navigate your
+            Personalized career roadmaps powered . Navigate your
             professional future with confidence.
           </p>
         </div>
