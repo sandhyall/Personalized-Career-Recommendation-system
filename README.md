@@ -1,0 +1,1 @@
+Our Personalized Career Recommendation System is a web-based application designed to help users identify suitable career paths based on their skills, interests, and preferences. The system analyzes user input and provides intelligent career suggestions using DAGs, Heuristic Scoring and Content-based filtering algorithms.
