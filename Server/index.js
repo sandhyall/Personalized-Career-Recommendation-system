@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const express = require("express");
 const cors = require("cors");
 const { UserRoutes } = require("./App/router/web/UserRoute");
+const { AdminRoute } = require("./App/router/admin/adminRoute");
 require("dotenv").config();
 
 const app = express();
@@ -15,6 +16,7 @@ app.use(
 app.use(express.json());
 
 app.use("/user",UserRoutes)
+app.use("/admin",AdminRoute)
 
 
 mongoose
