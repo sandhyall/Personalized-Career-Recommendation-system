@@ -18,9 +18,10 @@ app.use(express.json());
 app.use("/user",UserRoutes)
 app.use("/admin",AdminRoute)
 
+console.log("DB =", process.env.DB);
 
 mongoose
-  .connect(process.env.DB)
+.connect(process.env.MONGO_URI)
   .then(() => console.log("Database Connected!"))
   .catch((err) => console.log(err));
 
