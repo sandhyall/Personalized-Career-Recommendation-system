@@ -3,23 +3,27 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon index.js"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "type": "commonjs",
+  "scripts": {
+    "start": "nodemon index.js",
+    "dev": "nodemon index.js"
+    
+  },
   "dependencies": {
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
-    "express": "^5.2.1",
+    "express": "^4.18.2",
     "jsonwebtoken": "^9.0.3",
+<<<<<<< HEAD
     "mongoose": "^9.3.1",
     "multer": "^2.1.1",
+=======
+    "mongoose": "^7.6.0"
+  },
+  "devDependencies": {
+>>>>>>> 86c29b039570d39a35c1e62e0ff94241e488a82c
     "nodemon": "^3.1.14"
   }
 }

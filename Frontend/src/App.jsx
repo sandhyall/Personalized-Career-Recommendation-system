@@ -11,6 +11,8 @@ import DashboardOverview from "./Component/Dashboard/DashboardOverview";
 import CareerDashboard from "./Component/Dashboard/CarrerDahbord";
 import About from "./Pages/About";
 import Contactus from "./Pages/Contactus";
+import CareerForm from "./Pages/CareerForm";
+
 
 
 const App = () => {
@@ -24,6 +26,8 @@ const App = () => {
             <Route path="/register" element={<Register />} />
             <Route path="/about" element={<About/>}/>
             <Route path="/contact" element={<Contactus/>}/>
+                        <Route path="/get-started" element={<CareerForm/>}/>
+
           </Route>
           <Route path="/adminlogin" element={<AdminLogin />} />
           <Route
@@ -42,5 +46,6 @@ const App = () => {
     </div>
   );
 };
+
 
 export default App;
