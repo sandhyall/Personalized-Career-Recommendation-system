@@ -38,7 +38,7 @@ const Navbar = () => {
               Login
             </Link>
             <Link
-              to="/start"
+              to="/get-started"
               className="px-5 py-2 bg--600 text-white bg-black rounded-lg hover:bg-indigo-700 shadow-md transition"
             >
               Get Started

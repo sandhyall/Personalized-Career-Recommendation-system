@@ -10,24 +10,42 @@ const Contactus = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
     setContact((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  const handleSubmit = (e) => {
+  // UPDATED LOGIC TO CONNECT TO BACKEND
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log(contact);
-    alert("Form submitted successfully!");
+    try {
+      const response = await fetch("http://localhost:8000/contact/insert", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(contact),
+      });
 
-    setContact({
-      name: "",
-      email: "",
-      message: "",
-    });
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        alert("Message sent successfully!");
+        // Reset form only on success
+        setContact({
+          name: "",
+          email: "",
+          message: "",
+        });
+      } else {
+        alert(data.message || "Something went wrong.");
+      }
+    } catch (error) {
+      console.error("Connection Error:", error);
+      alert("Could not connect to the server. Make sure your backend is running!");
+    }
   };
 
   return (
@@ -51,7 +69,7 @@ const Contactus = () => {
               <Mail className="text-blue-600" />
               <div>
                 <p className="font-semibold text-gray-700">Email</p>
-                <p className="text-gray-600">careerguider1@gmail.com</p>
+                <p className="text-gray-600">gyawalisaral9@gmail.com</p>
               </div>
             </div>
           </div>

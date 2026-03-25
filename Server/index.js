@@ -6,6 +6,7 @@ const cors = require("cors");
 
 const { UserRoutes } = require("./App/router/web/UserRoute");
 const { AdminRoute } = require("./App/router/admin/adminRoute");
+const Contactrouter = require("./App/router/contactRoute");
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use(express.json());
 
 app.use("/user",UserRoutes)
 app.use("/admin",AdminRoute)
+app.use("/contact",Contactrouter);
 
 
 mongoose
