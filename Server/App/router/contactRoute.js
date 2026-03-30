@@ -1,6 +1,9 @@
+const express = require("express");
 const nodemailer = require("nodemailer");
-const ContactModel = require("../../model/contactmodel");
+const contactModel = require('../model/contactModel');
 require("dotenv").config();
+
+const contactRoute = express.Router();
 
 const ContactInsert = async (req, res) => {
   const { name, email, message } = req.body;
@@ -12,7 +15,7 @@ const ContactInsert = async (req, res) => {
 
   try {
     // Save to DB
-    const contact = new ContactModel({ name, email, message });
+    const contact = new contactModel({ name, email, message });
     await contact.save();
 
     // Setup Nodemailer with Gmail
@@ -52,4 +55,6 @@ const ContactInsert = async (req, res) => {
   }
 };
 
-module.exports = ContactInsert;
+contactRoute.post("/", ContactInsert);
+
+module.exports = { contactRoute };
