@@ -7,7 +7,6 @@
   "scripts": {
     "start": "nodemon index.js",
     "dev": "nodemon index.js"
-    
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -16,14 +15,10 @@
     "dotenv": "^17.3.1",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.3",
-<<<<<<< HEAD
-    "mongoose": "^9.3.1",
-    "multer": "^2.1.1",
-=======
-    "mongoose": "^7.6.0"
+    "mongoose": "^7.6.0",
+    "multer": "^2.1.1"
   },
   "devDependencies": {
->>>>>>> 86c29b039570d39a35c1e62e0ff94241e488a82c
     "nodemon": "^3.1.14"
   }
 }

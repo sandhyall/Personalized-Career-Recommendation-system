@@ -31,10 +31,10 @@ const HeroSection = () => {
               Find My Career Path
             </Link>
             <Link
-              to="/how-it-works"
+              to="/available"
               className="w-full sm:w-auto px-8 py-4 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors  whitespace-nowrap"
             >
-              View Case Studies
+             Available Courses
             </Link>
           </div>
 

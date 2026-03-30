@@ -2,44 +2,63 @@ const Title = require("../../model/titlemodel");
 
 const TitleInsert = async (req, res) => {
   try {
-    const { name, topicId } = req.body;
+    const { name, topicId, description } = req.body;
 
-    if (!name || !topicId) {
+    if (!name?.trim() || !topicId) {
       return res.status(400).json({
         status: "error",
         msg: "Name and TopicId are required",
       });
     }
 
-    const newTitle = new Title({ name, topicId });
+    const newTitle = new Title({
+      name: name.trim(),
+      topicId,
+      description: description?.trim() || "",
+    });
+
     const saved = await newTitle.save();
 
-    res.status(201).json({
+    return res.status(201).json({
       status: "success",
+      msg: "Title added successfully",
       data: saved,
     });
   } catch (err) {
-    res.status(500).json({ status: "error", msg: err.message });
+    console.error("Insert error:", err);
+    return res.status(500).json({
+      status: "error",
+      msg: "Server error while creating title",
+    });
   }
 };
 
 const TitleList = async (req, res) => {
   try {
     const titles = await Title.find()
-      .populate("topicId", "name")
+      .populate("topicId", "name description")
       .sort({ createdAt: -1 });
 
-    res.json({ status: "success", data: titles });
+    return res.status(200).json({
+      status: "success",
+      msg: "Titles fetched successfully",
+      count: titles.length,
+      data: titles,
+    });
   } catch (err) {
-    res.status(500).json({ status: "error", msg: err.message });
+    console.error("Fetch error:", err);
+    return res.status(500).json({
+      status: "error",
+      msg: "Server error while fetching titles",
+    });
   }
 };
 
 const EditTitle = async (req, res) => {
   try {
-    const { name, topicId } = req.body;
+    const { name, topicId, description } = req.body;
 
-    if (!name || !topicId) {
+    if (!name?.trim() || !topicId) {
       return res.status(400).json({
         status: "error",
         msg: "Name and TopicId are required",
@@ -48,8 +67,15 @@ const EditTitle = async (req, res) => {
 
     const updatedTitle = await Title.findByIdAndUpdate(
       req.params.id,
-      { name, topicId },
-      { new: true },
+      {
+        name: name.trim(),
+        topicId,
+        description: description?.trim() || "",
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
     );
 
     if (!updatedTitle) {
@@ -59,13 +85,17 @@ const EditTitle = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       status: "success",
       msg: "Title updated successfully",
       data: updatedTitle,
     });
   } catch (err) {
-    res.status(500).json({ status: "error", msg: err.message });
+    console.error("Update error:", err);
+    return res.status(500).json({
+      status: "error",
+      msg: "Server error while updating title",
+    });
   }
 };
 
@@ -80,14 +110,51 @@ const DeleteTitle = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       status: "success",
       msg: "Title deleted successfully",
       data: deletedTitle,
     });
   } catch (err) {
-    res.status(500).json({ status: "error", msg: err.message });
+    console.error("Delete error:", err);
+    return res.status(500).json({
+      status: "error",
+      msg: "Server error while deleting title",
+    });
   }
 };
 
-module.exports = { TitleInsert, TitleList, EditTitle, DeleteTitle };
+const getSingleTitle = async (req, res) => {
+  try {
+    const title = await Title.findById(req.params.id).populate(
+      "topicId",
+      "name description",
+    );
+
+    if (!title) {
+      return res.status(404).json({
+        status: "error",
+        msg: "Title not found",
+      });
+    }
+
+    res.status(200).json({
+      status: "success",
+      data: title,
+    });
+  } catch (err) {
+    console.error("getSingleTitle error:", err);
+    res.status(500).json({
+      status: "error",
+      msg: "Server error",
+    });
+  }
+};
+
+module.exports = {
+  TitleInsert,
+  TitleList,
+  EditTitle,
+  DeleteTitle,
+  getSingleTitle,
+};

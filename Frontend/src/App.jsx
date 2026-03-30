@@ -12,8 +12,8 @@ import CareerDashboard from "./Component/Dashboard/CarrerDahbord";
 import About from "./Pages/About";
 import Contactus from "./Pages/Contactus";
 import CareerForm from "./Pages/CareerForm";
-
-
+import AvailableCourses from "./Component/AvailableCourses/AvailableCourses";
+import Viewdetails from "./Component/AvailableCourses/viewdetails";
 
 const App = () => {
   return (
@@ -24,28 +24,28 @@ const App = () => {
             <Route index element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/about" element={<About/>}/>
-            <Route path="/contact" element={<Contactus/>}/>
-                        <Route path="/get-started" element={<CareerForm/>}/>
-
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contactus />} />
+            <Route path="/get-started" element={<CareerForm />} />
+            <Route path="/available" element={<AvailableCourses/>}/>
+            <Route path="/view/:id" element={<Viewdetails/>}/>
           </Route>
           <Route path="/adminlogin" element={<AdminLogin />} />
           <Route
             path="/admin"
             element={
-               <ProtectRoute>
+              <ProtectRoute>
                 <AdminDahboard />
               </ProtectRoute>
             }
           >
-            <Route path="/admin/overview" element={<DashboardOverview/>}/>
-            <Route path="/admin/careers" element={<CareerDashboard/>}/>
+            <Route path="/admin/overview" element={<DashboardOverview />} />
+            <Route path="/admin/careers" element={<CareerDashboard />} />
           </Route>
         </Routes>
       </BrowserRouter>
     </div>
   );
 };
-
 
 export default App;

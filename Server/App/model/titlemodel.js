@@ -6,10 +6,17 @@ const TitleSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+
     topicId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Topic",
       required: true,
+      index: true,
+    },
+
+    description: {
+      type: String,
+      default: "",
     },
   },
   { timestamps: true }

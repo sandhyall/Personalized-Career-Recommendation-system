@@ -6,13 +6,9 @@ const cors = require("cors");
 
 const { UserRoutes } = require("./App/router/web/UserRoute");
 const { AdminRoute } = require("./App/router/admin/adminRoute");
-<<<<<<< HEAD
 const TitleRoute = require("./App/router/admin/titlerouter");
 const TopicRoute = require("./App/router/admin/topicrouter");
 const CoursesRoute = require("./App/router/admin/coursesrouter");
-require("dotenv").config();
-=======
->>>>>>> 86c29b039570d39a35c1e62e0ff94241e488a82c
 
 const app = express();
 

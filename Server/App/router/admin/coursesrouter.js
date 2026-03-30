@@ -4,6 +4,7 @@ const {
   CoursesList,
   DeleteCourse,
   EditCourse,
+  getSingleCourse,
 } = require("../../controller/admin/courseController");
 const upload = require("../../multer/multer");
 
@@ -19,6 +20,7 @@ CoursesRoute.post(
 );
 
 CoursesRoute.get("/list", CoursesList);
+CoursesRoute.get("/:id",getSingleCourse);
 CoursesRoute.delete("/delete/:id", DeleteCourse);
 CoursesRoute.put(
   "/update/:id",
@@ -28,5 +30,6 @@ CoursesRoute.put(
   ]),
   EditCourse
 );
+
 
 module.exports = CoursesRoute;
