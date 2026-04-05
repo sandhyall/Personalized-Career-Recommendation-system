@@ -125,7 +125,7 @@ const Register = () => {
           {serverError && <p className="text-red-500 text-sm mt-2">{serverError}</p>}
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition duration-200 font-semibold"
+            className="w-full bg-slate-700 text-white py-2 rounded-md hover:bg-blue-700 transition duration-200 font-semibold"
           >
             Register
           </button>
