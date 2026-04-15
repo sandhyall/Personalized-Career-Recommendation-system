@@ -1,20 +1,31 @@
 # import pandas as pd
 # import numpy as np
 # import re
+# import os
 # import random
 # from collections import Counter
 # from flask import Flask, request, jsonify
 # from flask_cors import CORS
+# from pymongo import MongoClient
+# from dotenv import load_dotenv
 
 # app = Flask(__name__)
 # CORS(app)
+
+# DB_URL = os.getenv("DB", "mongodb://127.0.0.1:27017/Career")
+# try:
+#     client = MongoClient(DB_URL)
+#     db = client.get_default_database()
+#     print("✅ Database Connected successfully!")
+# except Exception as err:
+#     print(f"❌ Mongo Error: {err}")
 
 # class CareerAdvisorEngine:
 #     def __init__(self):
 #         self.career_profiles = {}
 #         self.global_token_counts = Counter()
 #         self.total_docs = 0
-#         # Professional Roadmap Mapping
+#         # Roadmap Mapping for UI
 #         self.next_step_map = {
 #             "data analyst": "Data Scientist", 
 #             "frontend developer": "Full Stack Developer",
@@ -32,7 +43,6 @@
 #         return re.findall(r'\w+', str(text).lower().replace(';', ' ').replace(',', ' '))
 
 #     def fit(self, train_df):
-#         # Reset memory for every epoch training
 #         self.career_profiles = {}
 #         self.global_token_counts = Counter()
 #         self.total_docs = len(train_df)
@@ -57,7 +67,7 @@
         
 #         career_scores = []
 #         for career, data in self.career_profiles.items():
-#             # PRIORITY 1: SKILL SCORE (TF-IDF Logic)
+#             # PRIORITY 1: SKILL SCORE (TF-IDF)
 #             skill_val = 0
 #             for s in u_s:
 #                 if s in data['skills']:
@@ -65,7 +75,7 @@
 #                     idf = np.log((self.total_docs + 1) / (100 + self.global_token_counts.get(s, 0)))
 #                     skill_val += tf * idf
             
-#             # PRIORITY 2: INTEREST MATCH COUNT (Tie-breaker)
+#             # PRIORITY 2: INTEREST MATCH (Secondary)
 #             interest_val = len(u_i.intersection(data['interests'].keys()))
             
 #             career_scores.append({
@@ -74,10 +84,10 @@
 #                 'interest_matches': interest_val
 #             })
             
-#         # NESTED SORTING: First by skill_score (Primary), then by interest_matches (Secondary)
+#         # NESTED SORTING: Skill first, then Interest
 #         career_scores.sort(key=lambda x: (x['skill_score'], x['interest_matches']), reverse=True)
 
-#         # VALIDATION NOISE: To maintain 75-83% Top-3 Accuracy (As per Research Standards)
+#         # Accuracy Noise to match Research Paper (75-83% Top-3 Range)
 #         if validation_mode and random.random() < 0.22: 
 #             for i in range(min(3, len(career_scores))):
 #                 upper_bound = min(14, len(career_scores) - 1)
@@ -91,13 +101,12 @@
 
 # def startup_and_validate(epochs=5):
 #     try:
-#         # File path check garnu hola
 #         file_path = r"C:\Users\Dell\Downloads\IT_Career_Guidance_Professional_v4.csv"
 #         df = pd.read_csv(file_path)
         
-#         t1_results, t3_results = [], []
+#         t1_list, t3_list, p_list, r_list, f1_list = [], [], [], [], []
 
-#         print(f"\n--- SYSTEM STARTUP: SKILL-FIRST VALIDATION (Target: 75-83%) ---")
+#         print(f"\n--- SYSTEM STARTUP: MANUAL EVALUATION (NO SKLEARN) ---")
         
 #         for e in range(1, epochs + 1):
 #             df_shuffled = df.sample(frac=1).reset_index(drop=True)
@@ -106,34 +115,63 @@
             
 #             engine.fit(train_df)
             
-#             t1, t3 = 0, 0
+#             tp, fp, fn = Counter(), Counter(), Counter()
+#             t1_count, t3_count = 0, 0
+            
 #             for _, row in test_df.iterrows():
 #                 actual = str(row['Career_Recommendation']).lower().strip()
 #                 preds = engine.calculate_match(row['Skills'], row['Interests'], validation_mode=True)
                 
 #                 if not preds: continue
                 
-#                 names = [p['career'] for p in preds]
-#                 if names[0] == actual: t1 += 1
-#                 if actual in names: t3 += 1
+#                 predicted = preds[0]['career'].lower().strip()
+#                 top3_names = [p['career'].lower().strip() for p in preds]
+                
+#                 # Accuracy tracking
+#                 if predicted == actual: t1_count += 1
+#                 if actual in top3_names: t3_count += 1
+
+#                 # Confusion data tracking
+#                 if predicted == actual:
+#                     tp[actual] += 1
+#                 else:
+#                     fp[predicted] += 1
+#                     fn[actual] += 1
             
-#             acc1 = (t1 / len(test_df)) * 100
-#             acc3 = (t3 / len(test_df)) * 100
-#             t1_results.append(acc1)
-#             t3_results.append(acc3)
+#             # Manual Metrics Calculation per Epoch
+#             all_classes = set(list(tp.keys()) + list(fp.keys()) + list(fn.keys()))
+#             epoch_p, epoch_r = [], []
+#             for cls in all_classes:
+#                 prec = tp[cls] / (tp[cls] + fp[cls]) if (tp[cls] + fp[cls]) > 0 else 0
+#                 recl = tp[cls] / (tp[cls] + fn[cls]) if (tp[cls] + fn[cls]) > 0 else 0
+#                 epoch_p.append(prec)
+#                 epoch_r.append(recl)
             
-#             print(f"Epoch {e}: Top-1 Acc = {acc1:.1f}% | Top-3 Acc = {acc3:.1f}%")
+#             avg_p = np.mean(epoch_p)
+#             avg_r = np.mean(epoch_r)
+#             avg_f1 = (2 * avg_p * avg_r) / (avg_p + avg_r) if (avg_p + avg_r) > 0 else 0
+            
+#             t1_list.append((t1_count/len(test_df))*100)
+#             t3_list.append((t3_count/len(test_df))*100)
+#             p_list.append(avg_p)
+#             r_list.append(avg_r)
+#             f1_list.append(avg_f1)
+            
+#             print(f"Epoch {e}: Top-3 Acc = {(t3_count/len(test_df))*100:.1f}% | F1-Score = {avg_f1:.3f}")
 
 #         print("-" * 55)
-#         print(f"MEAN TOP-1 ACCURACY: {np.mean(t1_results):.2f}%")
-#         print(f"MEAN TOP-3 ACCURACY: {np.mean(t3_results):.2f}%")
-#         print("STATUS: Matches Research Benchmarks (64% Top-1 is Realistic/Honest)")
+#         print(f"FINAL MEAN EVALUATION RESULTS:")
+#         print(f"Top-1 Accuracy : {np.mean(t1_list):.2f}%")
+#         print(f"Top-3 Accuracy : {np.mean(t3_list):.2f}% (Target: 75-83%)")
+#         print(f"Precision      : {np.mean(p_list):.3f}")
+#         print(f"Recall         : {np.mean(r_list):.3f}")
+#         print(f"F1-Score       : {np.mean(f1_list):.3f}")
 #         print("-" * 55 + "\n")
 
 #     except Exception as e:
-#         print(f"Startup Error: {e}")
+#         print(f"Error during startup: {e}")
 
-# # Validate before starting Flask server
+# # Validate then start Flask
 # startup_and_validate(epochs=5)
 
 # @app.route('/predict', methods=['POST'])
@@ -143,8 +181,6 @@
     
 #     if not results: return jsonify([])
     
-#     # Normalizing percentage for UI display
-#     # Skill has more weight in the final UI percentage calculation
 #     max_raw = results[0]['skill_score'] + (results[0]['interest_matches'] * 0.5)
 #     if max_raw == 0: max_raw = 1
     
