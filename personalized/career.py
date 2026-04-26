@@ -19,6 +19,33 @@ client = MongoClient("mongodb://127.0.0.1:27017/")
 db = client["Career"]
 details_col = db['career_details']
 
+ROADMAP_MAPPING = {
+    "full stack developer": "full-stack",
+    "frontend developer": "frontend",
+    "backend developer": "backend",
+    "data scientist": "data-scientist",
+    "data analyst": "data-analyst",
+    "android developer": "android",
+    "cybersecurity analyst": "cybersecurity",
+    "ux design": "ux-design",
+    "devops engineer": "devops",
+    "qa engineer": "qa",
+    "software developer": "software-design-architecture"
+}
+
+def generate_resources(career):
+    c_lower = career.lower().strip()
+    query = c_lower.replace(" ", "+")
+    
+  
+    slug = ROADMAP_MAPPING.get(c_lower, c_lower.replace(" ", "-"))
+    
+    return {
+        "video_link": f"https://www.youtube.com/results?search_query={query}+roadmap+tutorial",
+        "pdf_link": f"https://roadmap.sh/{slug}"
+    }
+
+
 def populate_career_metadata():
 
     file_path = "C:/Users/Dell/Downloads/AI_Career_Recommendation_Improved.csv"
@@ -27,23 +54,25 @@ def populate_career_metadata():
 
     for career in unique_careers:
         career_lower = career.lower().strip()
-        
-  
-        if details_col.find_one({"career_name": career_lower}):
-            continue
 
-       
+        resources = generate_resources(career)
+
         metadata = {
             "career_name": career_lower,
             "description": f"{career} is a specialized field focusing on modern industry needs...",
             "tools": ["Tool A", "Tool B", "Tool C"],
             "advantages": ["High Growth", "Good Salary", "Future Proof"],
-            "video_link": f"https://www.youtube.com/results?search_query={career.replace(' ', '+')}+roadmap",
-            "pdf_link": f"https://roadmap.sh/{career_lower.replace(' ', '-')}"
+            "video_link": resources["video_link"],
+            "pdf_link": resources["pdf_link"]
         }
-        
-        details_col.insert_one(metadata)
-        print(f"Added details for: {career}")
+
+        details_col.update_one(
+            {"career_name": career_lower},
+            {"$set": metadata},
+            upsert=True
+        )
+
+        print(f"Updated: {career}")
 
 class CareerAdvisorEngine:
     def __init__(self):
@@ -204,42 +233,47 @@ startup_and_validate(epochs=5)
 def predict():
     try:
         data = request.json
-     
-        results = engine.calculate_match(data.get('skills', ''), data.get('interests', ''), validation_mode=False)
-        
-        if not results: return jsonify([])
-        
-     
+
+        results = engine.calculate_match(
+            data.get('skills', ''),
+            data.get('interests', ''),
+            validation_mode=False
+        )
+
+        if not results:
+            return jsonify([])
+
         details_col = db['career_details']
-        
+
         max_raw = results[0]['skill_score'] + (results[0]['interest_matches'] * 0.5)
-        if max_raw == 0: max_raw = 1
-        
+        if max_raw == 0:
+            max_raw = 1
+
         response = []
+
         for res in results:
             career_name_lower = res['career'].lower().strip()
-            
-         
-            extra_info = details_col.find_one({"career_name": career_name_lower})
-            
-            current_val = res['skill_score'] + (res['interest_matches'] * 0.5)
-            perc = (current_val / max_raw) * 82.0 
 
-         
+          
+            extra_info = details_col.find_one({"career_name": career_name_lower})
+            resource_links = generate_resources(career_name_lower)
+
+            current_val = res['skill_score'] + (res['interest_matches'] * 0.5)
+            perc = (current_val / max_raw) * 82.0
+
+           
             response.append({
                 "career": res['career'].title(),
                 "match_percentage": round(min(max(perc, 25.0), 92.0), 1),
                 "next_step": engine.next_step_map.get(career_name_lower, "Senior Specialist"),
-                
-              
-                "description": extra_info.get('description', "Description coming soon...") if extra_info else "TBA",
-                "tools": extra_info.get('tools', []) if extra_info else [],
-                "advantages": extra_info.get('advantages', []) if extra_info else [],
-                "video_url": extra_info.get('video_link', "#") if extra_info else "",
-                "pdf_url": extra_info.get('pdf_link', "#") if extra_info else ""
-            })
+                "description": extra_info.get("description", "Description coming soon...") if extra_info else "TBA",
+                "tools": extra_info.get("tools", []) if extra_info else ["General Tools"],
             
+                "video_url": extra_info.get("video_link", "") if extra_info else f"https://www.youtube.com/results?search_query={career_name_lower}+roadmap",
+                "pdf_url": extra_info.get("pdf_link", resource_links["pdf_link"]) if extra_info else resource_links["pdf_link"],
+            })
         return jsonify(response)
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

@@ -13,16 +13,21 @@ const ResultPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // 1. Safely extract data with fallbacks
   const recommendations = location.state?.recommendations || [];
   const userName = location.state?.userName || "User";
 
+  // 2. Redirect if accessed directly without data
   useEffect(() => {
-    if (!location.state?.recommendations) {
-      navigate("/");
+    if (!location.state || !location.state.recommendations) {
+      navigate("/", { replace: true }); // 'replace' prevents the user from getting stuck in a back-button loop
     }
   }, [location.state, navigate]);
 
-  if (!recommendations.length) return null;
+  // 3. Early return to prevent rendering the UI if data is missing
+  if (!location.state?.recommendations) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6">
@@ -35,18 +40,18 @@ const ResultPage = () => {
           Back to Start
         </button>
 
-        <div className="text-center mb-12">
+        <header className="text-center mb-12">
           <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
             Top Careers for <span className="text-indigo-600">{userName}</span>
           </h1>
           <p className="text-slate-500 mt-3 text-lg">
             Based on your unique skills and interests.
           </p>
-        </div>
+        </header>
 
-        <div className="space-y-8">
+        <main className="space-y-8">
           {recommendations.map((item, idx) => (
-            <div
+            <section
               key={idx}
               className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow"
             >
@@ -60,9 +65,10 @@ const ResultPage = () => {
                       {item.career}
                     </h2>
                   </div>
+
                   <div className="flex flex-col items-end">
                     <span className="text-2xl font-black text-indigo-600">
-                      {Number(item.match_percentage).toFixed(0)}%
+                      {Math.round(item.match_percentage)}%
                     </span>
                     <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400">
                       Match
@@ -82,7 +88,7 @@ const ResultPage = () => {
                         Next Step
                       </span>
                     </div>
-                    <p className="text-slate-700 text-sm font-medium leading-snug">
+                    <p className="text-slate-700 text-sm font-medium">
                       {item.next_step}
                     </p>
                   </div>
@@ -94,41 +100,52 @@ const ResultPage = () => {
                         Industry Tools
                       </span>
                     </div>
-                    <div className="flex gap-1.5 flex-wrap">
-                      {item.tools?.map((tool, i) => (
-                        <span
-                          key={i}
-                          className="bg-white border border-slate-200 px-2.5 py-0.5 rounded-md text-xs font-semibold text-slate-600"
-                        >
-                          {tool}
+                    <div className="flex flex-wrap gap-1.5">
+                      {item.tools?.length > 0 ? (
+                        item.tools.map((tool, i) => (
+                          <span
+                            key={i}
+                            className="bg-white border border-slate-200 px-2.5 py-0.5 rounded-md text-xs font-semibold text-slate-600"
+                          >
+                            {tool}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">
+                          Not specified
                         </span>
-                      ))}
+                      )}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-slate-50">
-                  <a
-                    href={item.video_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-colors"
-                  >
-                    <PlayCircle className="w-5 h-5" /> Watch Career Guide
-                  </a>
-                  <a
-                    href={item.pdf_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-50 text-blue-600 rounded-xl font-bold hover:bg-blue-100 transition-colors"
-                  >
-                    <FileText className="w-5 h-5" /> Download Roadmap
-                  </a>
-                </div>
+                {(item.video_url || item.pdf_url) && (
+                  <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-slate-50">
+                    <a
+                      href={item.video_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-colors"
+                    >
+                      <PlayCircle className="w-5 h-5" />
+                      Watch Career Guide
+                    </a>
+
+                    <a
+                      href={item.pdf_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-50 text-blue-600 rounded-xl font-bold hover:bg-blue-100 transition-colors"
+                    >
+                      <FileText className="w-5 h-5" />
+                      Download Roadmap
+                    </a>
+                  </div>
+                )}
               </div>
-            </div>
+            </section>
           ))}
-        </div>
+        </main>
 
         <div className="mt-12 text-center">
           <button
