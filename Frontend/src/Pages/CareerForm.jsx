@@ -1,34 +1,37 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+const API_URL = "http://localhost:5000";
+
 const CareerForm = () => {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      navigate("/login");
-    }
-  }, [navigate]);
+  const [form, setForm] = useState({
+    name: "",
+    strength: "",
+    education: "",
+    skills: "",
+    interests: "",
+  });
 
-  const [name, setName] = useState("");
-  const [strength, setStrength] = useState("");
-  const [education, setEducation] = useState("");
-  const [skills, setSkills] = useState("");
-  const [interests, setInterests] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const API_URL = "http://localhost:5000";
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) navigate("/login");
+  }, [navigate]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     const token = localStorage.getItem("token");
-    if (!token) {
-      navigate("/login");
-      return;
-    }
+    if (!token) return navigate("/login");
 
     setLoading(true);
     setError("");
@@ -40,14 +43,22 @@ const CareerForm = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name, strength, education, skills, interests }),
+        body: JSON.stringify(form),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error("Invalid server response");
+      }
 
       if (response.ok) {
         navigate("/result", {
-          state: { recommendations: data, userName: name },
+          state: {
+            recommendations: data,
+            userName: form.name,
+          },
         });
       } else {
         setError(data.error || "Something went wrong");
@@ -60,78 +71,75 @@ const CareerForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
-        <div className="bg-slate-800 p-8 text-white text-center">
-          <h1 className="text-3xl font-bold italic">Career Navigator</h1>
-          <p className="text-slate-400 mt-2">
-            Please fill your details to get AI recommendations
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-100">
+      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg">
+        <div className="bg-slate-800 text-white text-center p-6 rounded-t-2xl">
+          <h1 className="text-2xl font-bold">Career Navigator</h1>
+          <p className="text-sm text-gray-300">
+            Fill your details for AI recommendation
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input
-              type="text"
-              placeholder="Full Name"
-              className="w-full p-3 border rounded-xl outline-none focus:border-slate-500"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-            <input
-              type="text"
-              placeholder="Strength"
-              className="w-full p-3 border rounded-xl outline-none focus:border-slate-500"
-              value={strength}
-              onChange={(e) => setStrength(e.target.value)}
-              required
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <input
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            placeholder="Full Name"
+            className="w-full p-3 border rounded-md"
+            required
+          />
 
           <input
-            type="text"
-            placeholder="Education (e.g. BE Computer)"
-            className="w-full p-3 border rounded-xl outline-none focus:border-slate-500"
-            value={education}
-            onChange={(e) => setEducation(e.target.value)}
+            name="strength"
+            value={form.strength}
+            onChange={handleChange}
+            placeholder="Strength"
+            className="w-full p-3 border rounded-md"
+            required
+          />
+
+          <input
+            name="education"
+            value={form.education}
+            onChange={handleChange}
+            placeholder="Education"
+            className="w-full p-3 border rounded-md"
             required
           />
 
           <textarea
-            placeholder="Skills (e.g. React, Python, Data Analysis)"
-            className="w-full p-3 border rounded-xl outline-none focus:border-slate-500"
+            name="skills"
+            value={form.skills}
+            onChange={handleChange}
+            placeholder="Skills"
+            className="w-full p-3 border rounded-md"
             rows="3"
-            value={skills}
-            onChange={(e) => setSkills(e.target.value)}
             required
           />
 
           <textarea
-            placeholder="Interests (e.g. AI, Web Development, Design)"
-            className="w-full p-3 border rounded-xl outline-none focus:border-slate-500"
+            name="interests"
+            value={form.interests}
+            onChange={handleChange}
+            placeholder="Interests"
+            className="w-full p-3 border rounded-md"
             rows="3"
-            value={interests}
-            onChange={(e) => setInterests(e.target.value)}
             required
           />
 
-          {error && (
-            <p className="text-red-500 text-sm bg-red-50 p-2 rounded-lg">
-              {error}
-            </p>
-          )}
+          {error && <p className="text-red-500 text-sm">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-4 rounded-xl font-bold transition-all ${
+            className={`w-full py-3 rounded-md font-semibold ${
               loading
-                ? "bg-slate-400"
-                : "bg-slate-800 hover:bg-slate-900 text-white shadow-lg"
+                ? "bg-gray-400"
+                : "bg-slate-800 text-white hover:bg-slate-900"
             }`}
           >
-            {loading ? "Analyzing Profile..." : "Get Recommendations"}
+            {loading ? "Analyzing..." : "Get Recommendation"}
           </button>
         </form>
       </div>

@@ -39,7 +39,7 @@ def populate_career_metadata():
             "tools": ["Tool A", "Tool B", "Tool C"],
             "advantages": ["High Growth", "Good Salary", "Future Proof"],
             "video_link": f"https://www.youtube.com/results?search_query={career.replace(' ', '+')}+roadmap",
-            "pdf_link": f"https://yourdomain.com/path/to/{career_lower.replace(' ', '_')}_guide.pdf"
+            "pdf_link": f"https://roadmap.sh/{career_lower.replace(' ', '-')}"
         }
         
         details_col.insert_one(metadata)
@@ -245,3 +245,4 @@ def predict():
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
+
