@@ -15,6 +15,7 @@ import CareerForm from "./Pages/CareerForm";
 import AvailableCourses from "./Component/AvailableCourses/AvailableCourses";
 import Viewdetails from "./Component/AvailableCourses/viewdetails";
 import ResultPage from "./Pages/ResultPage";
+import CareerPage from "./Pages/CareerPage";
 
 const App = () => {
   return (
@@ -31,6 +32,7 @@ const App = () => {
             <Route path="/available" element={<AvailableCourses/>}/>
             <Route path="/result" element={<ResultPage/>} />
             <Route path="/view/:id" element={<Viewdetails/>}/>
+             <Route path="/career/:slug" element={<CareerPage />} />
           
           </Route>
           <Route path="/adminlogin" element={<AdminLogin />} />
