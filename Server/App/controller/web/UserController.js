@@ -53,6 +53,11 @@ const Loginpost = async (req, res) => {
     res.status(200).send({
       message: "Login successful",
       token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+      },
     });
   } catch (error) {
     res.status(500).send({

@@ -25,7 +25,7 @@ const HeroSection = () => {
 
           <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
             <Link
-              to="/get-started"
+              to="/login"
               className="w-full sm:w-auto px-8 py-4 bg-slate-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 hover:bg-[#2563EB] hover:-translate-y-0.5 transition-all duration-200 whitespace-nowrap"
             >
               Find My Career Path
