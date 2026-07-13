@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const apiUrl = import.meta.env.VITE_SERVER;
+const API_URL = import.meta.env.VITE_SERVER || "http://localhost:8000/user";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -41,26 +41,26 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setServerError("");
     if (!validate()) return;
 
     try {
-      const res = await axios.post(`${apiUrl}/register`, {
+      const res = await axios.post(`${API_URL}/register`, {
         name: form.fullName,
         email: form.email,
         password: form.password,
       });
       alert(res.data.message);
+      setForm({
+        fullName: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+      });
       navigate("/login");
     } catch (error) {
       setServerError(error.response?.data?.message || "Something went wrong");
     }
-
-    setForm({
-      fullName: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    });
   };
 
   return (
