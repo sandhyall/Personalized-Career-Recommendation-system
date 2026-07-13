@@ -9,6 +9,9 @@ const { AdminRoute } = require("./App/router/admin/adminRoute");
 const TitleRoute = require("./App/router/admin/titlerouter");
 const TopicRoute = require("./App/router/admin/topicrouter");
 const CoursesRoute = require("./App/router/admin/coursesrouter");
+const profileRouter = require("./App/router/admin/profileRoutes");
+const recommendRouter = require("./App/router/admin/recommendRoutes");
+
 
 const app = express();
 
@@ -27,6 +30,8 @@ app.use("/admin", AdminRoute);
 app.use("/title", TitleRoute);
 app.use("/topic", TopicRoute);
 app.use("/courses", CoursesRoute);
+app.use("/api/profile", profileRouter);
+app.use("/api", recommendRouter);
 
 mongoose
   .connect(process.env.DB)

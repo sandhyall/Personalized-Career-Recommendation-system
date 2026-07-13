@@ -16,7 +16,8 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 client = MongoClient("mongodb://127.0.0.1:27017/")
 db = client["Career"]
 details_col = db['career_details']
-api_key = os.getenv("OPENAI_API_KEY")
+
+
 
 ROADMAP_MAPPING = {
     "full stack developer": "full-stack",
@@ -206,7 +207,6 @@ MANUAL_CAREER_DATA = [
         "description": "UX Researchers study user behavior and needs to improve product usability and user experience.",
         "tools": ["User Interviews", "Surveys", "Figma", "Analytics Tools", "Heatmaps"]
     },
-    
 ]
 
 CAREER_LOOKUP = {item['career_name']: item for item in MANUAL_CAREER_DATA}
@@ -318,7 +318,6 @@ NEXT_CAREER_DATA = [
     }
 ]
 
-# Case-insensitive lookup dictionary
 NEXT_CAREER_LOOKUP = {item['career_name'].lower().strip(): item for item in NEXT_CAREER_DATA}
 
 
@@ -343,7 +342,6 @@ def populate_career_metadata(file_path):
                 "advantages": ["High Growth", "Industry Demand", "Future Proof"],
                 "video_link": resources["video_link"],
                 "pdf_link": resources["pdf_link"],
-                # FIX 1: Store roadmap_sh link in DB as well
                 "roadmap_sh": resources["roadmap_sh"]
             }
         else:
@@ -354,7 +352,6 @@ def populate_career_metadata(file_path):
                 "advantages": ["Growth Potential"],
                 "video_link": resources["video_link"],
                 "pdf_link": resources["pdf_link"],
-                # FIX 1: Store roadmap_sh link in DB as well
                 "roadmap_sh": resources["roadmap_sh"]
             }
 
@@ -363,7 +360,7 @@ def populate_career_metadata(file_path):
             {"$set": metadata},
             upsert=True
         )
-        print(f"✅ Updated: {career_lower}")
+        print(f"Updated: {career_lower}")
 
 
 class CareerAdvisorEngine:
@@ -372,20 +369,27 @@ class CareerAdvisorEngine:
         self.global_token_counts = Counter()
         self.total_docs = 0
         self.is_trained = False
+
+      
         self.next_step_map = {
             "data scientist": "Chief Data Officer",
             "data analyst": "Senior Data Scientist",
             "frontend developer": "Full Stack Developer",
+            "front-end developer": "Full Stack Developer",   
             "backend developer": "Cloud Architect",
-            "ui/ux designer": "Product Manager",
+            "ux designer": "Product Manager",               
+            "ux researcher": "Product Manager",             
             "cloud engineer": "DevOps Architect",
-            "cybersecurity analyst": "CISO",
-            "mobile app developer": "Mobile Architect",
+            "cybersecurity analyst": "Chief Information Security Officer (CISO)",
+            "cybersecurity specialist": "Chief Information Security Officer (CISO)",
+            "mobile developer": "Mobile Architect",
             "qa engineer": "SDET Manager",
             "machine learning engineer": "AI Research Lead",
             "software developer": "Solutions Architect",
-            "graphic designer": "Creative Director", 
+            "software engineer": "Solutions Architect",     
+            "graphic designer": "Creative Director",
             "digital marketer": "Marketing Head",
+            "marketing manager": "Marketing Head",          
         }
 
     def clean_text(self, text):
@@ -427,7 +431,6 @@ class CareerAdvisorEngine:
             for s in u_s:
                 if s in data['skills']:
                     tf = np.log1p(data['skills'][s])
-                    # FIX 2: Corrected IDF smoothing — use 1 instead of hardcoded 100
                     idf = np.log((self.total_docs + 1) / (1 + self.global_token_counts.get(s, 0)))
                     skill_val += tf * idf
 
@@ -476,7 +479,7 @@ def startup_and_validate(file_path, epochs=5):
             split = int(len(df_shuffled) * 0.8)
             train_df, test_df = df_shuffled.iloc[:split], df_shuffled.iloc[split:]
 
-            engine.fit(train_df, target_col) 
+            engine.fit(train_df, target_col)
 
             tp, fp, fn = Counter(), Counter(), Counter()
             t1_count, t3_count = 0, 0
@@ -545,8 +548,12 @@ def startup_and_validate(file_path, epochs=5):
 def predict():
     try:
         data = request.json or {}
-        user_skills = data.get('skills', '')
-        user_interests = data.get('interests', '')
+        user_skills = data.get('skills', '').strip()
+        user_interests = data.get('interests', '').strip()
+
+        # FIX 3: Validate that skills and interests are not empty before predicting
+        if not user_skills or not user_interests:
+            return jsonify({"error": "Skills and interests are required."}), 400
 
         if not engine.is_trained:
             return jsonify({"error": "Model not trained. Please ensure the CSV file is available."}), 503
@@ -556,7 +563,8 @@ def predict():
             return jsonify([])
 
         max_raw = results[0]['skill_score'] + (results[0]['interest_matches'] * 0.5)
-        if max_raw == 0: max_raw = 1
+        if max_raw == 0:
+            max_raw = 1
 
         response = []
         for res in results:
@@ -565,10 +573,16 @@ def predict():
             if career_name_lower in NEXT_CAREER_LOOKUP:
                 extra_info = NEXT_CAREER_LOOKUP[career_name_lower]
             else:
-                # FIX 3: Strip MongoDB '_id' field to prevent JSON serialization error
+                # FIX 4: Strip MongoDB '_id' to prevent JSON serialization error
                 mongo_doc = details_col.find_one({"career_name": career_name_lower}) or {}
                 mongo_doc.pop('_id', None)
                 extra_info = mongo_doc
+
+            # FIX 5: If extra_info is still empty (not in lookup & not in DB),
+       
+            if not extra_info:
+                manual = CAREER_LOOKUP.get(career_name_lower, {})
+                extra_info = manual
 
             resource_links = generate_resources(career_name_lower)
 
@@ -581,7 +595,7 @@ def predict():
             response.append({
                 "career": res['career'].title(),
                 "match_percentage": round(min(max(perc, 25.0), 92.0), 1),
-                "description": extra_info.get("description", "Career path details coming soon..."),
+                "description": extra_info.get("description", "Career path details coming soon."),
                 "tools": extra_info.get("tools", ["General Industry Tools"]),
                 "advantages": extra_info.get("advantages", []),
                 "challenges": extra_info.get("challenges", []),
@@ -609,10 +623,8 @@ def get_career(slug):
     if career_name in NEXT_CAREER_LOOKUP:
         data = NEXT_CAREER_LOOKUP[career_name]
         resources = generate_resources(career_name)
-        
         return jsonify({
-            # FIX 4: Use .get() to safely access career_name, fallback to career_name variable
-            "career": data.get("career_name", career_name),
+            "career": data.get("career_name", career_name).title(),
             "description": data.get("description", ""),
             "tools": data.get("tools", []),
             "advantages": data.get("advantages", []),
@@ -623,35 +635,52 @@ def get_career(slug):
             "roadmap_url": resources["roadmap_sh"]
         })
 
-  
     data = details_col.find_one({"career_name": career_name})
 
     if not data:
+        # FIX 6: Also check MANUAL_CAREER_DATA before returning 404
+        manual = CAREER_LOOKUP.get(career_name)
+        if manual:
+            resources = generate_resources(career_name)
+            return jsonify({
+                "career": career_name.title(),
+                "description": manual.get("description", ""),
+                "tools": manual.get("tools", []),
+                "advantages": ["Industry Recognition", "High Growth", "Future Proof"],
+                "challenges": ["Market Changes", "Continuous Learning"],
+                "real_projects": ["Portfolio Development"],
+                "video_url": resources["video_link"],
+                "pdf_url": resources["pdf_link"],
+                "roadmap_url": resources["roadmap_sh"]
+            })
         return jsonify({"error": "Career path details not found"}), 404
 
     data.pop('_id', None)
     resources = generate_resources(career_name)
     return jsonify({
         "career": career_name.title(),
-        "description": data.get("description"),
-        "tools": data.get("tools"),
+        "description": data.get("description", ""),
+        "tools": data.get("tools", []),
         "advantages": data.get("advantages", ["Industry Recognition"]),
         "challenges": data.get("challenges", ["Market Changes"]),
         "real_projects": ["Portfolio Development"],
         "video_url": data.get("video_link", resources["video_link"]),
-        "pdf_url": data.get("pdf_link", resources["pdf_link"])
+        "pdf_url": data.get("pdf_link", resources["pdf_link"]),
+        "roadmap_url": data.get("roadmap_sh", resources["roadmap_sh"])
     })
 
 
 if __name__ == '__main__':
+    # FIX 7: Read CSV path from env variable so it works on any machine,
    
-    CSV_PATH = "C:/Users/Dell/Downloads/AI_Career_Recommendation_Improved.csv"
+    CSV_PATH = os.getenv(
+        "CAREER_CSV_PATH",
+        "C:/Users/Dell/Downloads/AI_Career_Recommendation_Improved.csv"
+    )
 
-    
     print("Populating database...")
     populate_career_metadata(CSV_PATH)
 
-  
     startup_and_validate(CSV_PATH, epochs=5)
 
     app.run(port=5000, debug=True)

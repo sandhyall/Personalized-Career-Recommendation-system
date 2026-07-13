@@ -16,6 +16,8 @@ import AvailableCourses from "./Component/AvailableCourses/AvailableCourses";
 import Viewdetails from "./Component/AvailableCourses/viewdetails";
 import ResultPage from "./Pages/ResultPage";
 import CareerPage from "./Pages/CareerPage";
+import Profile from "./Component/Common/Profile";
+import History from "./Component/Common/History";
 
 const App = () => {
   return (
@@ -33,6 +35,9 @@ const App = () => {
             <Route path="/result" element={<ResultPage/>} />
             <Route path="/view/:id" element={<Viewdetails/>}/>
              <Route path="/career/:slug" element={<CareerPage />} />
+             <Route path="/profile" element={<Profile/>}/>
+             <Route path="/history" element={<History/>}/>
+
           
           </Route>
           <Route path="/adminlogin" element={<AdminLogin />} />
