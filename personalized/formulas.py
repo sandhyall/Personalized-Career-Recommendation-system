@@ -1,4 +1,4 @@
-﻿"""
+"""
 Manual recommendation formulas ΓÇö no scikit-learn or ML libraries.
 
 All scoring is implemented from first principles using basic Python math.
