@@ -9,12 +9,17 @@ const { AdminRoute } = require("./App/router/admin/adminRoute");
 const TitleRoute = require("./App/router/admin/titlerouter");
 const TopicRoute = require("./App/router/admin/topicrouter");
 const CoursesRoute = require("./App/router/admin/coursesrouter");
+const profileRoutes = require("./App/router/admin/profileRoutes");
+const recommendRoutes = require("./App/router/admin/recommendRoutes");
+const progressRoutes = require("./App/router/admin/progressRoutes");
+const projectRoutes = require("./App/router/admin/projectRoutes");
+const userManageRoutes = require("./App/router/admin/userManageRoutes");
 
 const app = express();
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173", "http://localhost:5174"],
     credentials: true,
   })
 );
@@ -27,6 +32,11 @@ app.use("/admin", AdminRoute);
 app.use("/title", TitleRoute);
 app.use("/topic", TopicRoute);
 app.use("/courses", CoursesRoute);
+app.use("/api/profile", profileRoutes);
+app.use("/api/progress", progressRoutes);
+app.use("/api/projects", projectRoutes);
+app.use("/api/admin/users", userManageRoutes);
+app.use("/api", recommendRoutes);
 
 mongoose
   .connect(process.env.DB)

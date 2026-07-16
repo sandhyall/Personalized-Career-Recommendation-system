@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Briefcase,
   CheckSquare,
   ChevronRight,
+  Lock,
   Target,
 } from "lucide-react";
 
@@ -61,9 +62,7 @@ export function recommendJobsBySkills(career, selectedSkills, requiredSkills, ba
       level: "Intern",
       reason: `${readiness.completed_count} skills selected`,
     });
-    if (pct >= 35 && base[0]) {
-      out.push({ ...base[0], reason: "Skill match" });
-    }
+    if (pct >= 35 && base[0]) out.push({ ...base[0], reason: "Skill match" });
   } else if (pct < 85) {
     for (const job of base) {
       const level = String(job.level || "").toLowerCase();
@@ -73,14 +72,10 @@ export function recommendJobsBySkills(career, selectedSkills, requiredSkills, ba
       if (out.length >= 3) break;
     }
     if (!out.length) {
-      base.slice(0, 2).forEach((job) => {
-        out.push({ ...job, reason: "Skill match" });
-      });
+      base.slice(0, 2).forEach((job) => out.push({ ...job, reason: "Skill match" }));
     }
   } else {
-    base.slice(0, 3).forEach((job) => {
-      out.push({ ...job, reason: "Skill match" });
-    });
+    base.slice(0, 3).forEach((job) => out.push({ ...job, reason: "Skill match" }));
   }
 
   return out.slice(0, 3);
@@ -104,9 +99,17 @@ const JobReadinessPanel = ({
   requiredSkills = [],
   pathData,
   compact = false,
+  showJobs = false,
+  nextUnlocked = false,
+  initialSkills = [],
+  onSkillsChange,
 }) => {
   const navigate = useNavigate();
-  const [selected, setSelected] = useState([]);
+  const [selected, setSelected] = useState(initialSkills);
+
+  useEffect(() => {
+    setSelected(initialSkills || []);
+  }, [initialSkills]);
 
   const readiness = useMemo(
     () => calcJobReadiness(selected, requiredSkills),
@@ -114,14 +117,21 @@ const JobReadinessPanel = ({
   );
 
   const recommendedJobs = useMemo(
-    () => recommendJobsBySkills(career, selected, requiredSkills, jobs),
-    [career, selected, requiredSkills, jobs],
+    () =>
+      showJobs
+        ? recommendJobsBySkills(career, selected, requiredSkills, jobs)
+        : [],
+    [career, selected, requiredSkills, jobs, showJobs],
   );
 
   const toggleSkill = (skill) => {
-    setSelected((prev) =>
-      prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill],
-    );
+    setSelected((prev) => {
+      const next = prev.includes(skill)
+        ? prev.filter((s) => s !== skill)
+        : [...prev, skill];
+      onSkillsChange?.(next);
+      return next;
+    });
   };
 
   const steps = pathData?.steps || [];
@@ -133,11 +143,11 @@ const JobReadinessPanel = ({
         <div className="flex items-center gap-2 mb-3 text-indigo-600">
           <CheckSquare className="w-4 h-4" />
           <span className="font-bold text-xs uppercase tracking-widest">
-            Skills for Job Readiness
+            Skills to build
           </span>
         </div>
         <p className="text-xs text-slate-500 mb-3">
-          Mark the skills you already know for{" "}
+          Tap a skill when you feel comfortable with it. This updates your readiness for{" "}
           <span className="font-semibold text-slate-700">{career}</span>.
         </p>
 
@@ -166,12 +176,12 @@ const JobReadinessPanel = ({
           </div>
         )}
 
-        <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4">
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <Target className="w-4 h-4 text-indigo-600" />
+              <Target className="w-4 h-4 text-blue-600" />
               <span className="text-xs font-bold uppercase tracking-widest text-slate-600">
-                Job Readiness
+                Job readiness
               </span>
             </div>
             <div className="text-right">
@@ -190,54 +200,41 @@ const JobReadinessPanel = ({
             />
           </div>
           <p className="text-[11px] text-slate-500">
-            {readiness.completed_count} of {readiness.total_count} skills selected
-            {readiness.missing_skills.length > 0 && (
-              <>
-                {" "}
-                · Missing: {readiness.missing_skills.slice(0, 4).join(", ")}
-                {readiness.missing_skills.length > 4 ? "…" : ""}
-              </>
-            )}
+            {readiness.completed_count} of {readiness.total_count} skills completed
           </p>
         </div>
       </div>
 
-      <div>
-        <div className="flex items-center gap-2 mb-3 text-indigo-600">
-          <Briefcase className="w-4 h-4" />
-          <span className="font-bold text-xs uppercase tracking-widest">
-            Job Recommendations
-          </span>
+      {showJobs && (
+        <div>
+          <div className="flex items-center gap-2 mb-3 text-indigo-600">
+            <Briefcase className="w-4 h-4" />
+            <span className="font-bold text-xs uppercase tracking-widest">
+              Internship / Job Recommendations
+            </span>
+          </div>
+          {recommendedJobs.length === 0 ? (
+            <p className="text-sm text-slate-400 italic">No matches yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {recommendedJobs.map((job, i) => (
+                <li
+                  key={`${job.title}-${i}`}
+                  className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800">{job.title}</p>
+                    <p className="text-[11px] text-slate-500">{job.company_type}</p>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wide bg-white border border-slate-200 text-slate-600 px-2 py-1 rounded-md">
+                    {job.level}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-
-        {selected.length === 0 ? (
-          <p className="text-sm text-slate-400 italic bg-slate-50 border border-dashed border-slate-200 rounded-xl px-4 py-3">
-            Select skills above to see job options.
-          </p>
-        ) : recommendedJobs.length === 0 ? (
-          <p className="text-sm text-slate-400 italic">No jobs matched yet.</p>
-        ) : (
-          <ul className="space-y-2">
-            {recommendedJobs.map((job, i) => (
-              <li
-                key={`${job.title}-${i}`}
-                className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-slate-800">{job.title}</p>
-                  <p className="text-[11px] text-slate-500">{job.company_type}</p>
-                  {job.reason && (
-                    <p className="text-[10px] text-indigo-500 mt-0.5">{job.reason}</p>
-                  )}
-                </div>
-                <span className="text-[10px] font-bold uppercase tracking-wide bg-white border border-slate-200 text-slate-600 px-2 py-1 rounded-md">
-                  {job.level}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      )}
 
       {nextSteps.length > 0 && (
         <div>
@@ -254,16 +251,31 @@ const JobReadinessPanel = ({
             {nextSteps.map((step) => (
               <div key={step.slug} className="flex items-center gap-2">
                 <ChevronRight className="w-3 h-3 text-slate-400 shrink-0" />
-                <button
-                  type="button"
-                  onClick={() => navigate(`/career/${step.slug}`)}
-                  className="px-3 py-1.5 bg-indigo-600 text-white rounded-md text-[11px] font-bold hover:bg-indigo-700 shadow-md active:scale-95 transition-all"
-                >
-                  {step.title}
-                </button>
+                {nextUnlocked ? (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/career/${step.slug}`)}
+                    className="px-3 py-1.5 bg-indigo-600 text-white rounded-md text-[11px] font-bold hover:bg-[#2563EB] shadow-md active:scale-95 transition-all"
+                  >
+                    {step.title}
+                  </button>
+                ) : (
+                  <span
+                    className="px-3 py-1.5 bg-slate-100 text-slate-400 rounded-md text-[11px] font-bold inline-flex items-center gap-1"
+                    title="Unlocks after admin approves your project"
+                  >
+                    <Lock className="w-3 h-3" />
+                    {step.title}
+                  </span>
+                )}
               </div>
             ))}
           </div>
+          {!nextUnlocked && (
+            <p className="text-[11px] text-slate-400 mt-2">
+              Next path unlocks after Watch Guide, Documentation, skills, challenges, GitHub project, and admin approval.
+            </p>
+          )}
         </div>
       )}
     </div>

@@ -46,6 +46,10 @@ const Loginpost = async (req, res) => {
       return res.status(400).send({ message: "Invalid password" });
     }
 
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).send({ message: "JWT secret not defined" });
+    }
+
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "1d",
     });
@@ -53,6 +57,11 @@ const Loginpost = async (req, res) => {
     res.status(200).send({
       message: "Login successful",
       token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+      },
     });
   } catch (error) {
     res.status(500).send({

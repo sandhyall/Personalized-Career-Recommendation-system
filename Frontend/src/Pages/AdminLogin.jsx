@@ -1,8 +1,7 @@
 import axios from "axios";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-const Api = import.meta.env.VITE_SERVERS;
+import { API_URL } from "../utils/api";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -22,15 +21,18 @@ const AdminLogin = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setMessage("");
 
     try {
-      const res = await axios.post(`${Api}/login`, {
+      const res = await axios.post(`${API_URL}/admin/login`, {
         email: form.email,
         password: form.password,
       });
 
       if (res.data.token) {
         localStorage.setItem("token", res.data.token);
+        localStorage.setItem("role", "admin");
         setMessage(res.data.message);
         navigate("/admin");
       } else {
@@ -38,8 +40,6 @@ const AdminLogin = () => {
       }
     } catch (err) {
       setError(err.response?.data?.message || "Login Failed");
-    } finally {
-      setForm({ email: "", password: "" });
     }
   };
 

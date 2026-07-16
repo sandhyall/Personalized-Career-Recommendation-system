@@ -16,6 +16,8 @@ from career_enrichment import (
     resolve_career_key,
     to_slug,
     calculate_job_readiness,
+    get_practice_challenges,
+    get_project_assignment,
     CURATED_RESOURCES,
     CAREER_JOBS,
     REQUIRED_SKILLS,
@@ -161,8 +163,13 @@ MANUAL_CAREER_DATA = [
     },
     {
         "career_name": "front-end developer",
-        "description": "Front-end Developers build visually appealing and interactive user interfaces for websites and web applications.",
+        "description": "Front-end Developers build visually appealing and interactive user interfaces for websites and web applications using HTML, CSS, JavaScript, and modern frameworks.",
         "tools": ["HTML", "CSS", "JavaScript", "React", "Tailwind CSS"]
+    },
+    {
+        "career_name": "frontend developer",
+        "description": "Frontend Developers build interactive, responsive user interfaces using HTML, CSS, JavaScript, and modern frameworks like React.",
+        "tools": ["HTML", "CSS", "JavaScript", "React", "Tailwind CSS", "Git"]
     },
     {
         "career_name": "full stack developer",
@@ -232,6 +239,45 @@ MANUAL_CAREER_DATA = [
 ]
 
 CAREER_LOOKUP = {item['career_name']: item for item in MANUAL_CAREER_DATA}
+
+# Normalize common naming variants from the dataset vs manuals
+CAREER_ALIASES = {
+    "frontend developer": "front-end developer",
+    "front end developer": "front-end developer",
+    "ui/ux designer": "ux designer",
+    "ui ux designer": "ux designer",
+    "qa engineer": "automation engineer",
+}
+
+
+def get_manual_career_info(career_lower: str) -> dict:
+    key = (career_lower or "").lower().strip()
+    if key in CAREER_LOOKUP:
+        return CAREER_LOOKUP[key]
+    alias = CAREER_ALIASES.get(key)
+    if alias and alias in CAREER_LOOKUP:
+        return CAREER_LOOKUP[alias]
+    # Hyphen/space variants
+    spaced = key.replace("-", " ")
+    hyphen = key.replace(" ", "-")
+    if spaced in CAREER_LOOKUP:
+        return CAREER_LOOKUP[spaced]
+    if hyphen in CAREER_LOOKUP:
+        return CAREER_LOOKUP[hyphen]
+    return {}
+
+
+def is_weak_career_metadata(info: dict) -> bool:
+    if not info:
+        return True
+    tools = info.get("tools") or []
+    desc = str(info.get("description") or "")
+    if tools == ["General Industry Tools"] or not tools:
+        return True
+    if "specialized field focusing on modern industry needs" in desc:
+        return True
+    return False
+
 
 NEXT_CAREER_DATA = [
     {
@@ -354,7 +400,7 @@ def populate_career_metadata(file_path):
     for career in unique_careers:
         career_lower = career.lower().strip()
         resources = generate_resources(career_lower)
-        manual_entry = CAREER_LOOKUP.get(career_lower)
+        manual_entry = get_manual_career_info(career_lower)
 
         if manual_entry:
             metadata = {
@@ -362,6 +408,7 @@ def populate_career_metadata(file_path):
                 "description": manual_entry["description"],
                 "tools": manual_entry["tools"],
                 "advantages": ["High Growth", "Industry Demand", "Future Proof"],
+                "challenges": ["Continuous Learning", "Fast-Changing Tools"],
                 "video_link": resources["video_link"],
                 "pdf_link": resources["pdf_link"],
                 "roadmap_sh": resources["roadmap_sh"]
@@ -372,6 +419,7 @@ def populate_career_metadata(file_path):
                 "description": f"{career} is a specialized field focusing on modern industry needs.",
                 "tools": ["General Industry Tools"],
                 "advantages": ["Growth Potential"],
+                "challenges": ["Market Competition"],
                 "video_link": resources["video_link"],
                 "pdf_link": resources["pdf_link"],
                 "roadmap_sh": resources["roadmap_sh"]
@@ -580,6 +628,130 @@ def home():
     })
 
 
+# Common soft-skill / generic words that appear in the CSV but are NOT enough
+# to recommend a tech career path on their own.
+SOFT_STOPWORDS = {
+    "management", "leadership", "communication", "communications", "business",
+    "team", "teams", "work", "working", "worker", "good", "best", "basic",
+    "advanced", "knowledge", "experience", "learning", "learn", "study",
+    "student", "people", "person", "skill", "skills", "ability", "abilities",
+    "strong", "problem", "solving", "creative", "creativity", "analytical",
+    "analysis", "research", "writing", "speaking", "presentation",
+    "organization", "organised", "organized", "time", "planning", "project",
+    "projects", "collaboration", "collaborative", "interpersonal",
+    "professional", "development", "career", "careers", "job", "jobs",
+    "hello", "world", "test", "testing", "stuff", "thing", "things",
+    "something", "anything", "everything", "nothing", "interest", "interests",
+    "passion", "passions", "love", "like", "want", "need", "hardworking",
+    "dedicated", "motivated", "friendly", "english", "nepali", "language",
+}
+
+
+def _is_garbage_token(token):
+    """Reject tokens that look like random keyboard / placeholder junk."""
+    t = str(token or "").strip().lower()
+    if len(t) < 2:
+        return True
+    if re.fullmatch(r"(.)\1{2,}", t):  # aaa, xxxx
+        return True
+    if re.fullmatch(r"(?:abc|abcd|asdf|qwerty|zxcv|test|dummy|none|n/?a|null)+", t):
+        return True
+    if re.fullmatch(r"\d+", t):  # only digits
+        return True
+    # Mostly consonants with no vowel — weak signal of gibberish (short words exempt)
+    if len(t) >= 5 and not re.search(r"[aeiou]", t):
+        return True
+    return False
+
+
+def _skill_vocabulary():
+    vocab = set()
+    for data in (engine.career_profiles or {}).values():
+        vocab.update((data.get("skills") or {}).keys())
+    return vocab
+
+
+def _interest_vocabulary():
+    vocab = set()
+    for data in (engine.career_profiles or {}).values():
+        vocab.update((data.get("interests") or {}).keys())
+    return vocab
+
+
+def validate_user_profile_input(user_skills, user_interests):
+    """
+    Validate skills/interests before ranking.
+    Returns (ok, error_message, tech_skill_tokens, interest_tokens).
+    """
+    skill_tokens = [
+        t for t in engine.clean_text(user_skills)
+        if not _is_garbage_token(t)
+    ]
+    interest_tokens = [
+        t for t in engine.clean_text(user_interests)
+        if not _is_garbage_token(t)
+    ]
+
+    tech_skills = [t for t in skill_tokens if t not in SOFT_STOPWORDS]
+    real_interests = [t for t in interest_tokens if t not in SOFT_STOPWORDS]
+
+    if len(tech_skills) < 2:
+        if not skill_tokens:
+            return (
+                False,
+                "Please enter at least 2 real technical skills (e.g. Python, HTML, JavaScript). "
+                "Random or placeholder text is not accepted.",
+                tech_skills,
+                real_interests or interest_tokens,
+            )
+        return (
+            False,
+            "Generic words like management, communication, or leadership are not enough. "
+            "Please enter at least 2 technical skills (e.g. Python, SQL, React, Java).",
+            tech_skills,
+            real_interests or interest_tokens,
+        )
+
+    if len(interest_tokens) < 1:
+        return (
+            False,
+            "Please enter at least 1 real interest (e.g. Web Development, AI, Cybersecurity).",
+            tech_skills,
+            real_interests,
+        )
+
+    skill_vocab = _skill_vocabulary()
+    interest_vocab = _interest_vocabulary()
+
+    known_tech_skills = [t for t in tech_skills if t in skill_vocab]
+    known_interests = [
+        t for t in (real_interests or interest_tokens)
+        if t in interest_vocab or t in skill_vocab
+    ]
+
+    if len(known_tech_skills) < 2:
+        return (
+            False,
+            "Your skills do not match technical careers in our system. "
+            "Please use recognizable tech skills such as Python, Java, HTML, CSS, "
+            "JavaScript, React, or SQL.",
+            tech_skills,
+            real_interests or interest_tokens,
+        )
+
+    if len(known_interests) < 1:
+        return (
+            False,
+            "Your interests do not match tech careers in our system. "
+            "Please enter career-related interests such as Web Development, AI, "
+            "Data Science, Cybersecurity, Mobile Apps, or Cloud — not unrelated topics.",
+            tech_skills,
+            real_interests or interest_tokens,
+        )
+
+    return True, None, known_tech_skills, (known_interests or real_interests or interest_tokens)
+
+
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
@@ -593,16 +765,53 @@ def predict():
         if not engine.is_trained:
             return jsonify({"error": "Model not trained. Please ensure the CSV file is available."}), 503
 
-        results = engine.calculate_match(user_skills, user_interests)
-        if not results:
-            return jsonify([])
+        ok, err_msg, tech_skills, interest_tokens = validate_user_profile_input(
+            user_skills, user_interests
+        )
+        if not ok:
+            return jsonify({"error": err_msg, "code": "NO_MEANINGFUL_MATCH"}), 422
 
-        max_raw = results[0]['skill_score'] + (results[0]['interest_matches'] * 0.5)
-        if max_raw == 0:
-            max_raw = 1
+        # Rank using filtered technical skills only (ignore soft-skill noise)
+        filtered_skills = " ".join(tech_skills)
+        filtered_interests = " ".join(interest_tokens)
+        results = engine.calculate_match(filtered_skills, filtered_interests)
+        if not results:
+            return jsonify({
+                "error": "No career matches found for your skills and interests. Please try different values.",
+                "code": "NO_MEANINGFUL_MATCH",
+            }), 422
+
+        # Absolute quality gate: zero skill overlap = unmatched
+        best = results[0]
+        if best.get("skill_score", 0) <= 0:
+            return jsonify({
+                "error": "No relevant career path matched your technical skills. "
+                         "Please enter skills related to technology careers "
+                         "(e.g. Python, React, SQL, Java).",
+                "code": "NO_MEANINGFUL_MATCH",
+            }), 422
+
+        max_raw = best["skill_score"] + (best["interest_matches"] * 0.5)
+        if max_raw <= 0:
+            return jsonify({
+                "error": "No relevant career path matched your input. Please revise your skills and interests.",
+                "code": "NO_MEANINGFUL_MATCH",
+            }), 422
+
+        # Soft-skill-only inputs previously scored high because those words exist in the CSV
+        MIN_ABS_SCORE = 2.0
+        if float(best["skill_score"]) < MIN_ABS_SCORE:
+            return jsonify({
+                "error": "Your skills are too weakly related to careers in our system. "
+                         "Add more specific technical skills (e.g. JavaScript, SQL, UI Design) and try again.",
+                "code": "WEAK_MATCH",
+            }), 422
 
         response = []
         for res in results:
+            if float(res.get("skill_score", 0)) < MIN_ABS_SCORE * 0.45:
+                continue
+
             career_name_lower = res['career'].lower().strip()
 
             if career_name_lower in NEXT_CAREER_LOOKUP:
@@ -611,28 +820,38 @@ def predict():
                 mongo_doc = details_col.find_one({"career_name": career_name_lower}) or {}
                 mongo_doc.pop('_id', None)
                 extra_info = mongo_doc
-       
-            if not extra_info:
-                manual = CAREER_LOOKUP.get(career_name_lower, {})
-                extra_info = manual
+
+            manual = get_manual_career_info(career_name_lower)
+            if is_weak_career_metadata(extra_info) and manual:
+                extra_info = {**extra_info, **manual, "career_name": career_name_lower}
 
             resource_links = generate_resources(career_name_lower)
-            tools = extra_info.get("tools", ["General Industry Tools"])
+            tools = extra_info.get("tools") or manual.get("tools") or ["HTML", "CSS", "JavaScript", "Git"]
+            if tools == ["General Industry Tools"] and manual.get("tools"):
+                tools = manual["tools"]
             required_skills = get_required_skills(career_name_lower, fallback_tools=tools)
             jobs = get_jobs_for_career(career_name_lower)
             path_data = build_path_dag(res['career'], engine.next_step_map)
+            real_projects = extra_info.get("real_projects", [])
+            practice_challenges = get_practice_challenges(career_name_lower)
+            project_assignment = get_project_assignment(
+                career_name_lower, real_projects=real_projects, tools=tools
+            )
 
             current_val = res['skill_score'] + (res['interest_matches'] * 0.5)
             perc = (current_val / max_raw) * 82.0
 
             response.append({
                 "career": res['career'].title(),
+                "slug": to_slug(res['career']),
                 "match_percentage": round(min(max(perc, 25.0), 92.0), 1),
-                "description": extra_info.get("description", "Career path details coming soon."),
+                "description": extra_info.get("description") or manual.get("description") or "Career path details coming soon.",
                 "tools": tools,
                 "advantages": extra_info.get("advantages", []),
                 "challenges": extra_info.get("challenges", []),
-                "real_projects": extra_info.get("real_projects", []),
+                "real_projects": real_projects,
+                "practice_challenges": practice_challenges,
+                "project_assignment": project_assignment,
                 "video_url": resource_links["video_link"],
                 "video_title": resource_links.get("video_title"),
                 "pdf_url": resource_links["pdf_link"],
@@ -641,6 +860,13 @@ def predict():
                 "jobs": jobs,
                 "path_data": path_data,
             })
+
+        if not response:
+            return jsonify({
+                "error": "No relevant career path matched your skills and interests. "
+                         "Please revise your input with clearer technical skills.",
+                "code": "NO_MEANINGFUL_MATCH",
+            }), 422
 
         return jsonify(response)
 
@@ -654,13 +880,17 @@ def _career_detail_payload(career_key, data_source):
     tools = data_source.get("tools", [])
     display_name = data_source.get("career_name", career_key)
     path_data = build_path_dag(display_name, engine.next_step_map)
+    real_projects = data_source.get("real_projects", ["Portfolio Development"])
     return {
         "career": str(display_name).title() if not str(display_name)[0].isupper() else display_name,
+        "slug": to_slug(display_name),
         "description": data_source.get("description", ""),
         "tools": tools,
         "advantages": data_source.get("advantages", ["Industry Recognition", "High Growth", "Future Proof"]),
         "challenges": data_source.get("challenges", ["Market Changes", "Continuous Learning"]),
-        "real_projects": data_source.get("real_projects", ["Portfolio Development"]),
+        "real_projects": real_projects,
+        "practice_challenges": get_practice_challenges(career_key),
+        "project_assignment": get_project_assignment(career_key, real_projects=real_projects, tools=tools),
         "video_url": resources["video_link"],
         "video_title": resources.get("video_title"),
         "pdf_url": resources["pdf_link"],
@@ -684,7 +914,7 @@ def get_career(slug):
 
     if not data:
         # Also check MANUAL_CAREER_DATA before returning 404
-        manual = CAREER_LOOKUP.get(career_name)
+        manual = get_manual_career_info(career_name)
         if manual:
             return jsonify(_career_detail_payload(career_name, manual))
 
@@ -696,6 +926,10 @@ def get_career(slug):
         return jsonify({"error": "Career path details not found"}), 404
 
     data.pop('_id', None)
+    if is_weak_career_metadata(data):
+        manual = get_manual_career_info(career_name)
+        if manual:
+            data = {**data, **manual, "career_name": career_name}
     return jsonify(_career_detail_payload(career_name, data))
 
 
@@ -721,10 +955,8 @@ def job_readiness():
 
 
 if __name__ == '__main__':
-    CSV_PATH = os.getenv(
-        "CAREER_CSV_PATH",
-        "C:/Users/Dell/Downloads/AI_Career_Recommendation_Improved.csv"
-    )
+    _default_csv = os.path.join(os.path.dirname(__file__), "data", "career_dataset.csv")
+    CSV_PATH = os.getenv("CAREER_CSV_PATH", _default_csv)
 
     print("Populating database...")
     populate_career_metadata(CSV_PATH)

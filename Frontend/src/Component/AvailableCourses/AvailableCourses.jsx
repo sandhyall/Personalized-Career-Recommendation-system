@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { DollarSign, TrendingUp, Briefcase, ArrowRight } from "lucide-react";
+import { ArrowRight, Layers, Type } from "lucide-react";
 
 const AvailableCourses = () => {
   const [courses, setCourses] = useState([]);
@@ -53,36 +53,24 @@ const AvailableCourses = () => {
               </span>
             </div>
 
+            <div className="flex flex-wrap gap-3 mb-4 text-sm text-gray-600">
+              {course.topicId?.name && (
+                <span className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-3 py-1 rounded-lg">
+                  <Layers size={14} className="text-indigo-500" />
+                  Topic: {course.topicId.name}
+                </span>
+              )}
+              {course.titleId?.name && (
+                <span className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-3 py-1 rounded-lg">
+                  <Type size={14} className="text-emerald-500" />
+                  Title: {course.titleId.name}
+                </span>
+              )}
+            </div>
+
             <p className="text-gray-500 text-base mb-8 leading-relaxed">
               {course.description}
             </p>
-
-            <div className="space-y-6 mb-10">
-              <div className="flex items-start gap-4">
-                <div className="p-2 bg-green-50 rounded-lg">
-                  <DollarSign size={20} className="text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400">Salary Range</p>
-                  <p className="text-gray-700 font-medium">
-                    {course.salary || "$75,000 - $125,000"}
-                  </p>
-                </div>
-              </div>
-
-              
-              <div className="flex items-start gap-4">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <TrendingUp size={20} className="text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400">Job Growth</p>
-                  <p className="text-gray-700 font-medium">
-                    {course.growth || "23% (Much faster than average)"}
-                  </p>
-                </div>
-              </div>
-            </div>
 
             <Link to={`/view/${course._id}`}>
               <button className="w-full flex items-center justify-center gap-2 py-4 border-2 border-gray-100 rounded-2xl text-gray-900 font-bold text-lg hover:bg-gray-50 transition-colors group">

@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
-
-const API_URL = import.meta.env.VITE_SERVER || "http://localhost:8000/user";
+import {
+  USER_API,
+  fetchProgress,
+} from "../utils/api";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -20,7 +22,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const res = await axios.post(`${API_URL}/login`, form);
+      const res = await axios.post(`${USER_API}/login`, form);
 
       const token = res.data.token;
       const userId = res.data.user?._id;
@@ -33,8 +35,14 @@ const Login = () => {
       localStorage.setItem("token", token);
       localStorage.setItem("userId", userId);
       localStorage.setItem("name", res.data.user?.name || "");
+      localStorage.setItem("role", "student");
 
-      navigate("/get-started");
+      try {
+        const progress = await fetchProgress(userId);
+        navigate(progress?.progress ? "/dashboard" : "/get-started");
+      } catch {
+        navigate("/get-started");
+      }
     } catch (error) {
       setServerError(error.response?.data?.message || "Login failed");
     } finally {
@@ -49,6 +57,9 @@ const Login = () => {
         className="w-full max-w-md bg-white p-8 rounded-xl shadow-md space-y-4"
       >
         <h2 className="text-2xl font-bold text-center">Login</h2>
+        <p className="text-center text-sm text-slate-500 -mt-2">
+          Continue your personalized career journey
+        </p>
 
         <input
           name="email"
@@ -68,9 +79,7 @@ const Login = () => {
           className="w-full p-2 border rounded"
         />
 
-        {serverError && (
-          <p className="text-red-500 text-sm">{serverError}</p>
-        )}
+        {serverError && <p className="text-red-500 text-sm">{serverError}</p>}
 
         <button
           type="submit"
@@ -80,9 +89,9 @@ const Login = () => {
           {loading ? "Logging in..." : "Login"}
         </button>
 
-        <p className="text-center text-sm">
-          Don't have an account?{" "}
-          <Link to="/register" className="text-blue-600">
+        <p className="text-center text-sm text-slate-500">
+          No account?{" "}
+          <Link to="/register" className="text-indigo-600 font-medium hover:underline">
             Register
           </Link>
         </p>

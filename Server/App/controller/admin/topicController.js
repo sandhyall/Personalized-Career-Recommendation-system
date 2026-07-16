@@ -4,16 +4,16 @@ const TopicInsert = async (req, res) => {
   try {
     const { name, description } = req.body;
 
-    if (!name?.trim() || !description?.trim()) {
+    if (!name?.trim()) {
       return res.status(400).json({
         status: "error",
-        msg: "Name and Description are required",
+        msg: "Name is required",
       });
     }
 
     const newTopic = new Topic({
       name: name.trim(),
-      description: description.trim(),
+      description: description?.trim() || "",
     });
 
     const savedTopic = await newTopic.save();
@@ -55,10 +55,10 @@ const EditTopic = async (req, res) => {
   try {
     const { name, description } = req.body;
 
-    if (!name?.trim() || !description?.trim()) {
+    if (!name?.trim()) {
       return res.status(400).json({
         status: "error",
-        msg: "Name and Description are required",
+        msg: "Name is required",
       });
     }
 
@@ -66,7 +66,7 @@ const EditTopic = async (req, res) => {
       req.params.id,
       {
         name: name.trim(),
-        description: description.trim(),
+        description: description?.trim() || "",
       },
       {
         new: true,

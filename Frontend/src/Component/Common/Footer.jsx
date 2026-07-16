@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { Mail, Linkedin, Twitter } from "lucide-react";
 import logo from "../../assets/image.png";
 
@@ -13,8 +14,8 @@ const Footer = () => {
             <img src={logo} alt="" className="h-14 w-auto" />
           </div>
           <p className="text-sm leading-relaxed">
-            Personalized career roadmaps powered . Navigate your
-            professional future with confidence.
+            Personalized career roadmaps powered by your skills and interests.
+            Navigate your professional future with confidence.
           </p>
         </div>
 
@@ -22,56 +23,55 @@ const Footer = () => {
           <h4 className="text-white font-semibold mb-4">Platform</h4>
           <ul className="space-y-2 text-sm">
             <li>
-              <a href="/assessments" className="hover:text-blue-400 transition">
-                Career Quiz
-              </a>
+              <Link to="/register" className="hover:text-blue-400 transition">
+                Get Started
+              </Link>
             </li>
             <li>
-              <a href="/jobs" className="hover:text-blue-400 transition">
-                Job Matches
-              </a>
+              <Link to="/get-started" className="hover:text-blue-400 transition">
+                Career Assessment
+              </Link>
             </li>
             <li>
-              <a href="/skills" className="hover:text-blue-400 transition">
-                Skill Tracking
-              </a>
+              <Link to="/my-careers" className="hover:text-blue-400 transition">
+                My Careers
+              </Link>
             </li>
           </ul>
         </div>
 
         <div>
-          <h4 className="text-white font-semibold mb-4">Resources</h4>
+          <h4 className="text-white font-semibold mb-4">Company</h4>
           <ul className="space-y-2 text-sm">
             <li>
-              <a href="/blog" className="hover:text-blue-400 transition">
-                Career Advice
-              </a>
+              <Link to="/about" className="hover:text-blue-400 transition">
+                About
+              </Link>
             </li>
             <li>
-              <a href="/help" className="hover:text-blue-400 transition">
-                Support Center
-              </a>
+              <Link to="/contact" className="hover:text-blue-400 transition">
+                Contact
+              </Link>
             </li>
             <li>
-              <a href="/privacy" className="hover:text-blue-400 transition">
-                Privacy Policy
-              </a>
+              <Link to="/login" className="hover:text-blue-400 transition">
+                Login
+              </Link>
             </li>
           </ul>
         </div>
 
         <div>
-          <h4 className="text-white font-semibold mb-4">Get Career Tips</h4>
-          <form className="flex gap-2">
-            <input
-              type="email"
-              placeholder="Email address"
-              className="bg-slate-800 border-none rounded px-3 py-2 text-sm w-full focus:ring-2 focus:ring-blue-500"
-            />
-            <button className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-sm transition">
-              Join
-            </button>
-          </form>
+          <h4 className="text-white font-semibold mb-4">Grow with us</h4>
+          <p className="text-sm text-slate-400 mb-3">
+            Create a free account to save recommendations and return anytime.
+          </p>
+          <Link
+            to="/register"
+            className="inline-block bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-sm transition"
+          >
+            Create free account
+          </Link>
         </div>
       </div>
 
@@ -79,15 +79,15 @@ const Footer = () => {
         <p className="text-xs">
           © {currentYear} CareerLogic AI. All rights reserved.
         </p>
-        <div className="flex gap-6">
-          <a href="#" className="hover:text-white">
-            <Twitter size={18} />
+        <div className="flex gap-4">
+          <a href="mailto:hello@careerlogic.ai" aria-label="Email">
+            <Mail className="w-4 h-4 hover:text-white" />
           </a>
-          <a href="#" className="hover:text-white">
-            <Linkedin size={18} />
+          <a href="https://linkedin.com" target="_blank" rel="noreferrer" aria-label="LinkedIn">
+            <Linkedin className="w-4 h-4 hover:text-white" />
           </a>
-          <a href="#" className="hover:text-white">
-            <Mail size={18} />
+          <a href="https://twitter.com" target="_blank" rel="noreferrer" aria-label="Twitter">
+            <Twitter className="w-4 h-4 hover:text-white" />
           </a>
         </div>
       </div>

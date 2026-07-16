@@ -783,6 +783,54 @@ def build_path_dag(current_career: str, next_step_map: dict) -> dict:
     }
 
 
+def get_practice_challenges(career_name: str) -> list:
+    key = career_name.lower().strip()
+    display = career_name.strip().title()
+    skills = get_required_skills(career_name)
+    primary = skills[0] if skills else "core skills"
+    secondary = skills[1] if len(skills) > 1 else "industry tools"
+    return [
+        {
+            "id": f"{to_slug(key)}-challenge-1",
+            "title": f"{display} Fundamentals Lab",
+            "description": f"Complete hands-on exercises covering {primary} for a beginner {display} role.",
+        },
+        {
+            "id": f"{to_slug(key)}-challenge-2",
+            "title": f"{display} Tool Challenge",
+            "description": f"Practice with {secondary} and document your solution steps.",
+        },
+        {
+            "id": f"{to_slug(key)}-challenge-3",
+            "title": f"Mini {display} Portfolio Task",
+            "description": f"Build a small showcase that proves you can apply {display} skills independently.",
+        },
+    ]
+
+
+def get_project_assignment(career_name: str, real_projects=None, tools=None) -> dict:
+    display = career_name.strip().title()
+    projects = real_projects or []
+    title = projects[0] if projects else f"{display} Capstone Project"
+    skills = get_required_skills(career_name, fallback_tools=tools)
+    return {
+        "title": title,
+        "description": (
+            f"Design and deliver a portfolio-ready project that mirrors real work as a {display}. "
+            f"Use the recommended industry tools, document your process on GitHub, and share a live demo."
+        ),
+        "difficulty": "Intermediate",
+        "required_skills": skills[:6],
+        "duration": "2-4 weeks",
+        "objectives": [
+            f"Apply required {display} skills end-to-end",
+            "Use at least 3 industry tools from this career path",
+            "Publish a clear GitHub README with setup instructions",
+            "Provide a live demo or deployed preview",
+        ],
+    }
+
+
 def resolve_career_key(slug_or_name: str, known_names: list) -> str:
     raw = slug_or_name.replace("-", " ").lower().strip()
     raw = re.sub(r"\s+", " ", raw)
