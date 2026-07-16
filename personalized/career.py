@@ -22,6 +22,15 @@ from career_enrichment import (
     CAREER_JOBS,
     REQUIRED_SKILLS,
 )
+from formulas import (
+    build_token_vector,
+    compute_skill_tfidf_score,
+    cosine_similarity,
+    heuristic_final_score,
+    interest_overlap_score,
+    normalize_match_percentage,
+    tokenize,
+)
 
 load_dotenv()
 app = Flask(__name__)
@@ -438,6 +447,7 @@ class CareerAdvisorEngine:
         self.career_profiles = {}
         self.global_token_counts = Counter()
         self.total_docs = 0
+        self.vocabulary = []
         self.is_trained = False
 
       
@@ -462,65 +472,119 @@ class CareerAdvisorEngine:
             "marketing manager": "Marketing Head",          
         }
 
+    # Map short/alias skill tokens to canonical forms used in the dataset
+    SKILL_ALIASES = {
+        "js": "javascript",
+        "ts": "typescript",
+        "nodejs": "node",
+        "reactjs": "react",
+        "vuejs": "vue",
+        "nextjs": "next",
+        "html5": "html",
+        "css3": "css",
+        "postgres": "postgresql",
+        "mongo": "mongodb",
+        "k8s": "kubernetes",
+        "py": "python",
+        "golang": "go",
+    }
+
     def clean_text(self, text):
-        if pd.isna(text):
-            return []
-        return re.findall(r'\w+', str(text).lower().replace(';', ' ').replace(',', ' '))
+        return tokenize(text)
+
+    def normalize_tokens(self, tokens):
+        """Expand aliases (js -> javascript) without losing originals."""
+        out = set()
+        for t in tokens:
+            t = str(t).lower().strip()
+            if not t:
+                continue
+            out.add(t)
+            out.add(self.SKILL_ALIASES.get(t, t))
+        return out
 
     def fit(self, train_df, target_col):
         self.career_profiles = {}
         self.global_token_counts = Counter()
         self.total_docs = len(train_df)
+        vocab_set = set()
 
         for _, row in train_df.iterrows():
             career = str(row[target_col]).lower().strip()
             if career not in self.career_profiles:
-                self.career_profiles[career] = {'skills': Counter(), 'interests': Counter()}
+                self.career_profiles[career] = {
+                    "skills": Counter(),
+                    "interests": Counter(),
+                    "all_tokens": [],
+                }
 
-            s_tok = self.clean_text(row['Skills'])
-            i_tok = self.clean_text(row['Interests'])
+            s_tok = self.clean_text(row["Skills"])
+            # Include Strengths when present (old engine did this)
+            interest_parts = [str(row.get("Interests", "") or "")]
+            for col in ("Strengths", "Strength"):
+                if col in row and not pd.isna(row.get(col)):
+                    interest_parts.append(str(row.get(col)))
+            i_tok = self.clean_text(" ".join(interest_parts))
+            combined = s_tok + i_tok
 
-            self.career_profiles[career]['skills'].update(s_tok)
-            self.career_profiles[career]['interests'].update(i_tok)
+            self.career_profiles[career]["skills"].update(s_tok)
+            self.career_profiles[career]["interests"].update(i_tok)
+            self.career_profiles[career]["all_tokens"].extend(combined)
 
-            for t in set(s_tok + i_tok):
+            for t in set(combined):
                 self.global_token_counts[t] += 1
+                vocab_set.add(t)
 
+        self.vocabulary = sorted(vocab_set)
         self.is_trained = True
 
     def calculate_match(self, user_skills, user_interests, validation_mode=False):
+        """
+        Old composite matcher:
+          FinalScore = (TF-IDF × 0.52) + (Interest × 0.26) + (Cosine×100 × 0.22)
+        Soft-word filtering stays in /predict validation; this only ranks careers.
+        """
         if not self.is_trained or not self.career_profiles:
             return []
 
-        u_s = set(self.clean_text(user_skills))
-        u_i = set(self.clean_text(user_interests))
+        user_skill_tokens = self.normalize_tokens(self.clean_text(user_skills))
+        user_interest_tokens = self.normalize_tokens(self.clean_text(user_interests))
+        user_all_tokens = list(user_skill_tokens | user_interest_tokens)
+        user_vector = build_token_vector(user_all_tokens, self.vocabulary)
 
         career_scores = []
         for career, data in self.career_profiles.items():
-            skill_val = 0
-            for s in u_s:
-                if s in data['skills']:
-                    tf = np.log1p(data['skills'][s])
-                    idf = np.log((self.total_docs + 1) / (1 + self.global_token_counts.get(s, 0)))
-                    skill_val += tf * idf
+            skill_score = compute_skill_tfidf_score(
+                user_skill_tokens,
+                data["skills"],
+                self.total_docs,
+                self.global_token_counts,
+            )
+            interest_score = interest_overlap_score(
+                user_interest_tokens, data["interests"]
+            )
+            career_vector = build_token_vector(data["all_tokens"], self.vocabulary)
+            cosine_sim = cosine_similarity(user_vector, career_vector)
+            final_score = heuristic_final_score(skill_score, interest_score, cosine_sim)
 
-            interest_val = len(u_i.intersection(data['interests'].keys()))
+            career_scores.append(
+                {
+                    "career": career,
+                    "skill_score": skill_score,
+                    "interest_matches": interest_score,
+                    "cosine_similarity": round(cosine_sim, 4),
+                    "final_score": final_score,
+                }
+            )
 
-            career_scores.append({
-                'career': career,
-                'skill_score': skill_val,
-                'interest_matches': interest_val
-            })
-
-        career_scores.sort(key=lambda x: (x['skill_score'], x['interest_matches']), reverse=True)
-
-        if validation_mode and random.random() < 0.22:
-            n = len(career_scores)
-            if n > 3:
-                for i in range(min(3, n)):
-                    bad_idx = random.randint(min(3, n - 1), n - 1)
-                    career_scores[i], career_scores[bad_idx] = career_scores[bad_idx], career_scores[i]
-
+        career_scores.sort(
+            key=lambda item: (
+                item["final_score"],
+                item["skill_score"],
+                item["interest_matches"],
+            ),
+            reverse=True,
+        )
         return career_scores[:3]
 
 
@@ -556,7 +620,7 @@ def startup_and_validate(file_path, epochs=5):
 
             for _, row in test_df.iterrows():
                 actual = str(row[target_col]).lower().strip()
-                preds = engine.calculate_match(row['Skills'], row['Interests'], validation_mode=True)
+                preds = engine.calculate_match(row['Skills'], row['Interests'], validation_mode=False)
 
                 if not preds:
                     continue
@@ -783,7 +847,7 @@ def predict():
 
         # Absolute quality gate: zero skill overlap = unmatched
         best = results[0]
-        if best.get("skill_score", 0) <= 0:
+        if best.get("skill_score", 0) <= 0 and best.get("final_score", 0) <= 0:
             return jsonify({
                 "error": "No relevant career path matched your technical skills. "
                          "Please enter skills related to technology careers "
@@ -791,7 +855,9 @@ def predict():
                 "code": "NO_MEANINGFUL_MATCH",
             }), 422
 
-        max_raw = best["skill_score"] + (best["interest_matches"] * 0.5)
+        max_raw = best.get("final_score") or (
+            best["skill_score"] + (best["interest_matches"] * 0.5)
+        )
         if max_raw <= 0:
             return jsonify({
                 "error": "No relevant career path matched your input. Please revise your skills and interests.",
@@ -799,8 +865,8 @@ def predict():
             }), 422
 
         # Soft-skill-only inputs previously scored high because those words exist in the CSV
-        MIN_ABS_SCORE = 2.0
-        if float(best["skill_score"]) < MIN_ABS_SCORE:
+        MIN_ABS_SCORE = 0.15  # final_score scale (old engine); skill_score alone can be small
+        if float(best.get("final_score", 0)) < MIN_ABS_SCORE and float(best.get("skill_score", 0)) < 0.5:
             return jsonify({
                 "error": "Your skills are too weakly related to careers in our system. "
                          "Add more specific technical skills (e.g. JavaScript, SQL, UI Design) and try again.",
@@ -809,7 +875,8 @@ def predict():
 
         response = []
         for res in results:
-            if float(res.get("skill_score", 0)) < MIN_ABS_SCORE * 0.45:
+            final_score = float(res.get("final_score", 0))
+            if final_score < MIN_ABS_SCORE * 0.45 and float(res.get("skill_score", 0)) < 0.2:
                 continue
 
             career_name_lower = res['career'].lower().strip()
@@ -838,13 +905,14 @@ def predict():
                 career_name_lower, real_projects=real_projects, tools=tools
             )
 
-            current_val = res['skill_score'] + (res['interest_matches'] * 0.5)
-            perc = (current_val / max_raw) * 82.0
+            perc = normalize_match_percentage(final_score if final_score > 0 else (
+                res["skill_score"] + (res["interest_matches"] * 0.5)
+            ), max_raw)
 
             response.append({
                 "career": res['career'].title(),
                 "slug": to_slug(res['career']),
-                "match_percentage": round(min(max(perc, 25.0), 92.0), 1),
+                "match_percentage": perc,
                 "description": extra_info.get("description") or manual.get("description") or "Career path details coming soon.",
                 "tools": tools,
                 "advantages": extra_info.get("advantages", []),

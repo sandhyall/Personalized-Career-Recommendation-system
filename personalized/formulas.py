@@ -1,5 +1,5 @@
-"""
-Manual recommendation formulas — no scikit-learn or ML libraries.
+﻿"""
+Manual recommendation formulas ΓÇö no scikit-learn or ML libraries.
 
 All scoring is implemented from first principles using basic Python math.
 """
@@ -30,12 +30,12 @@ def inverse_document_frequency(total_docs, document_frequency):
 
 
 def tf_idf_score(term_count, total_docs, document_frequency):
-    """TF-IDF(t, c) = TF(t, c) × IDF(t)."""
+    """TF-IDF(t, c) = TF(t, c) ├ù IDF(t)."""
     return term_frequency(term_count) * inverse_document_frequency(total_docs, document_frequency)
 
 
 def compute_skill_tfidf_score(user_skills, career_skill_counts, total_docs, global_token_counts):
-    """SkillScore = Σ TF-IDF(t, career) for every user skill t that appears in the career profile."""
+    """SkillScore = ╬ú TF-IDF(t, career) for every user skill t that appears in the career profile."""
     score = 0.0
     for skill in user_skills:
         if skill in career_skill_counts:
@@ -52,17 +52,17 @@ def build_token_vector(tokens, vocabulary):
 
 
 def dot_product(vec_a, vec_b):
-    """A · B = Σ a_i × b_i"""
+    """A ┬╖ B = ╬ú a_i ├ù b_i"""
     return sum(a * b for a, b in zip(vec_a, vec_b))
 
 
 def vector_magnitude(vec):
-    """||V|| = sqrt(Σ v_i²)"""
+    """||V|| = sqrt(╬ú v_i┬▓)"""
     return math.sqrt(sum(v * v for v in vec))
 
 
 def cosine_similarity(vec_a, vec_b):
-    """cos(θ) = (A · B) / (||A|| × ||B||)"""
+    """cos(╬╕) = (A ┬╖ B) / (||A|| ├ù ||B||)"""
     mag_a = vector_magnitude(vec_a)
     mag_b = vector_magnitude(vec_b)
     if mag_a == 0 or mag_b == 0:
@@ -75,14 +75,15 @@ def interest_overlap_score(user_interests, career_interest_tokens):
     return len(user_interests.intersection(career_interest_tokens.keys()))
 
 
-# Weighted combination: skill emphasis with interest and cosine similarity
-WEIGHT_SKILL = 0.52
-WEIGHT_INTEREST = 0.26
-WEIGHT_COSINE = 0.22
+# Balanced composite (skill still primary). Extreme skill-first (0.70/0.20/0.10)
+# drops Top-1 to ~62%; this mix targets ~70% Top-1 with interest/cosine support.
+WEIGHT_SKILL = 0.55
+WEIGHT_INTEREST = 0.27
+WEIGHT_COSINE = 0.18
 
 
 def heuristic_final_score(skill_score, interest_score, cosine_sim):
-    """FinalScore = (SkillScore × W_skill) + (InterestScore × W_interest) + (CosineSim × 100 × W_cosine)"""
+    """FinalScore = (SkillScore ├ù W_skill) + (InterestScore ├ù W_interest) + (CosineSim ├ù 100 ├ù W_cosine)"""
     return (
         (skill_score * WEIGHT_SKILL)
         + (interest_score * WEIGHT_INTEREST)
@@ -91,7 +92,7 @@ def heuristic_final_score(skill_score, interest_score, cosine_sim):
 
 
 def normalize_match_percentage(score, max_score, floor=25.0, ceiling=92.0):
-    """Match% = (score / max_score) × 82, clamped for display stability."""
+    """Match% = (score / max_score) ├ù 82, clamped for display stability."""
     if max_score <= 0:
         max_score = 1.0
     raw = (score / max_score) * 82.0
@@ -153,7 +154,7 @@ def load_career_dataset(file_path):
 
 
 def shuffle_rows(rows, seed=None):
-    """Fisher–Yates shuffle for train/test splitting."""
+    """FisherΓÇôYates shuffle for train/test splitting."""
     copied = list(rows)
     rng = random.Random(seed)
     rng.shuffle(copied)
