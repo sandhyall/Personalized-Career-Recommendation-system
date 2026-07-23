@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_URL, ML_URL } from "../utils/api";
@@ -72,6 +72,16 @@ const SOFT_STOPWORDS = new Set([
   "dedicated", "motivated", "friendly", "passion", "love", "like", "want",
 ]);
 
+/** Tech tokens that look like "no vowels" (e.g. mysql) must never be treated as garbage. */
+const TECH_TOKEN_ALLOWLIST = new Set([
+  "html", "css", "sql", "mysql", "nosql", "php", "aws", "gcp", "nlp", "dba",
+  "etl", "ci", "cd", "ui", "ux", "ml", "ai", "iot", "sdk", "api", "apis",
+  "jvm", "ocr", "gui", "cli", "ide", "os", "db", "rdbms", "orm", "jwt",
+  "ssl", "tls", "http", "https", "rest", "graphql", "mongodb", "postgresql",
+  "redis", "kafka", "nginx", "linux", "macos", "ios", "seo", "sem", "crm",
+  "erp", "saas", "paas", "iaas", "sre", "qa", "sdet", "css3", "html5",
+]);
+
 const CAREER_INTEREST_PHRASES = [
   "web development", "web design", "full stack", "frontend", "backend",
   "mobile apps", "mobile development", "android", "ios", "app development",
@@ -85,20 +95,24 @@ const CAREER_INTEREST_PHRASES = [
   "ui", "ux", "user experience", "product design", "design systems",
   "software engineering", "software development", "programming", "coding",
   "system design", "distributed systems", "scalability", "apis",
-  "databases", "sql", "nosql", "etl", "pipelines", "data engineering",
+  "databases", "database", "database administration", "dba", "sql", "nosql",
+  "mysql", "oracle", "postgresql", "mongodb", "etl", "pipelines", "data engineering",
   "testing", "qa", "quality assurance", "automation", "sdet",
   "game development", "game dev", "robotics", "iot", "blockchain",
   "networking", "networks", "saas", "startups", "open source",
   "hackathons", "mern stack", "product development", "platform engineering",
+  "seo", "digital marketing", "content marketing", "wordpress",
 ];
 
 const CAREER_INTEREST_TOKENS = (() => {
   const set = new Set([
     "ai", "ml", "nlp", "ux", "ui", "devops", "cybersecurity", "blockchain",
     "iot", "saas", "frontend", "backend", "fullstack", "android", "ios",
-    "cloud", "security", "coding", "programming", "databases", "analytics",
+    "cloud", "security", "coding", "programming", "databases", "database",
+    "dba", "mysql", "oracle", "postgresql", "mongodb", "analytics",
     "automation", "robotics", "networking", "apis", "docker", "kubernetes",
-    "aws", "azure", "react", "python", "java", "javascript", "sql",
+    "aws", "azure", "react", "python", "java", "javascript", "sql", "seo",
+    "wordpress", "php", "marketing",
   ]);
   CAREER_INTEREST_PHRASES.forEach((phrase) => {
     phrase.split(/[\s/]+/).forEach((t) => {
@@ -106,17 +120,19 @@ const CAREER_INTEREST_TOKENS = (() => {
       if (tok.length >= 2 && !SOFT_STOPWORDS.has(tok)) set.add(tok);
     });
   });
+  TECH_TOKEN_ALLOWLIST.forEach((t) => set.add(t));
   return set;
 })();
 
 const OFF_TOPIC_INTERESTS = new Set([
   "cooking", "cricket", "football", "soccer", "basketball", "music", "singing",
-  "dancing", "dance", "movies", "movie", "sports", "sport", "food", "travel",
-  "travelling", "fashion", "shopping", "gaming", "youtube",
+  "sing", "dancing", "dance", "movies", "movie", "sports", "sport", "food", "travel",
+  "travelling", "fashion", "shopping", "gaming", "gamer", "youtube",
   "tiktok", "instagram", "facebook", "sleeping", "eating", "party", "parties",
   "cars", "bike", "biking", "photography", "painting", "drawing",
   "poetry", "novels", "anime", "manga", "fitness", "gym",
   "yoga", "meditation", "religion", "politics", "farming", "agriculture",
+  "acting", "drama", "theatre", "theater", "hobby", "hobbies", "fun",
 ]);
 
 const tokenize = (text) =>
@@ -135,12 +151,14 @@ const interestPhrases = (text) =>
     .filter(Boolean);
 
 const isGarbageToken = (t) => {
+  if (TECH_TOKEN_ALLOWLIST.has(t)) return false;
   if (t.length < 2) return true;
   if (/^(.)\1{2,}$/.test(t)) return true;
   if (/^(?:abc|abcd|asdf|qwerty|zxcv|test|dummy|none|n\/?a|null)+$/.test(t))
     return true;
   if (/^\d+$/.test(t)) return true;
-  if (t.length >= 5 && !/[aeiou]/.test(t)) return true;
+  // Allow 'y' as a vowel so tokens like "mysql" / "python" are not rejected
+  if (t.length >= 5 && !/[aeiouy]/.test(t)) return true;
   return false;
 };
 
@@ -306,17 +324,28 @@ const CareerForm = () => {
     const techSkills = skills.filter((t) => !SOFT_STOPWORDS.has(t));
     const realInterests = interests.filter((t) => !SOFT_STOPWORDS.has(t));
 
+    // Hobbies must not be entered as "technical skills"
+    const hobbyAsSkills = techSkills.filter((t) => OFF_TOPIC_INTERESTS.has(t));
+    if (hobbyAsSkills.length > 0) {
+      return "Skills must be IT/technical (e.g. Python, MySQL, React). Do not enter hobbies like sleeping, eating, singing, or dancing as skills.";
+    }
+
     if (techSkills.length < 2) {
-      return "Generic words like management or communication are not enough. Enter at least 2 technical skills (e.g. Python, HTML, JavaScript, React).";
+      return "Enter at least 2 IT technical skills (e.g. Python, MySQL, React, SEO, Java). Soft skills alone are not enough.";
     }
     if (interests.length < 1 || isGarbageFreeText(form.interests)) {
-      return "Please enter at least 1 real interest (e.g. Web Development, AI, Cybersecurity).";
+      return "Please enter at least 1 IT career interest (e.g. Web Development, DBA, Cybersecurity, SEO).";
     }
     if (realInterests.length < 1) {
-      return "Please add a career-related interest (e.g. Web Development, Data Science) - not only generic words.";
+      return "Please add an IT-related interest (e.g. Data Science, Cloud, Mobile Apps) — not only generic words.";
+    }
+    // Reject hobbies / non-IT topics (singing, dancing, sports, etc.)
+    const offTopicHits = realInterests.filter((t) => OFF_TOPIC_INTERESTS.has(t));
+    if (offTopicHits.length > 0 && !hasCareerRelatedInterest(form.interests)) {
+      return "This system recommends IT careers only. Interests like singing, dancing, sports, or cooking are not accepted. Use IT interests such as Web Development, AI, DBA, SEO, or Cybersecurity.";
     }
     if (mostlyOffTopicInterests(form.interests) || !hasCareerRelatedInterest(form.interests)) {
-      return "Interests must relate to tech careers (e.g. Web Development, AI, Data Science, Cybersecurity, Mobile Apps, Cloud). Unrelated topics like sports, cooking, or entertainment are not accepted.";
+      return "Interests must be IT/tech related (e.g. Web Development, AI, Data Science, Cybersecurity, DBA, SEO, Cloud). Unrelated topics are not accepted.";
     }
     return "";
   };
@@ -436,7 +465,7 @@ const CareerForm = () => {
         <div className="bg-slate-800 text-white text-center p-6 rounded-t-2xl">
           <h1 className="text-2xl font-bold">Career Navigator</h1>
           <p className="text-sm text-gray-300">
-            Enter technical skills and interests for top career matches
+            IT careers only — enter technical skills and IT-related interests
           </p>
         </div>
 
@@ -514,7 +543,7 @@ const CareerForm = () => {
             name="skills"
             value={form.skills}
             onChange={handleChange}
-            placeholder="Skills (e.g. HTML, CSS, Python, JavaScript) â€” at least 2 real skills"
+            placeholder="IT technical skills (e.g. Python, MySQL, React, SEO, Java) — at least 2"
             className="w-full p-3 border rounded-md"
             rows="3"
             required
@@ -524,7 +553,7 @@ const CareerForm = () => {
             name="interests"
             value={form.interests}
             onChange={handleChange}
-            placeholder="Career interests only (e.g. Web Development, AI, Cybersecurity, Data Science)"
+            placeholder="IT career interests only (e.g. Web Development, DBA, Cybersecurity, SEO) — not singing/dancing"
             className="w-full p-3 border rounded-md"
             rows="3"
             required

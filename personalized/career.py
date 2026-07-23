@@ -82,7 +82,7 @@ def generate_resources(career):
 MANUAL_CAREER_DATA = [
     {
         "career_name": "ai researcher",
-        "description": "AI Researchers study advanced artificial intelligence models, develop new algorithms, and work on improving machine learning, deep learning, and neural network systems. They often publish research papers and contribute to cutting-edge innovations like generative AI and large language models.",
+        "description": "AI Researchers study machine learning and deep learning models, develop algorithms, and work on research problems in artificial intelligence.",
         "tools": ["Python", "PyTorch", "TensorFlow", "Jupyter Notebook", "Research Papers"]
     },
     {
@@ -711,9 +711,39 @@ SOFT_STOPWORDS = {
 }
 
 
+TECH_TOKEN_ALLOWLIST = {
+    "html", "css", "sql", "mysql", "nosql", "php", "aws", "gcp", "nlp", "dba",
+    "etl", "ci", "cd", "ui", "ux", "ml", "ai", "iot", "sdk", "api", "apis",
+    "jvm", "ocr", "gui", "cli", "ide", "db", "rdbms", "orm", "jwt",
+    "ssl", "tls", "http", "https", "rest", "graphql", "mongodb", "postgresql",
+    "redis", "kafka", "nginx", "linux", "macos", "ios", "seo", "sem", "crm",
+    "erp", "saas", "paas", "iaas", "sre", "qa", "sdet", "css3", "html5",
+    "oracle", "sqlite", "mariadb", "dotnet", "nodejs", "reactjs", "nextjs",
+    "typescript", "golang", "kotlin", "swift", "flutter", "django", "laravel",
+    "spring", "hadoop", "spark", "tableau", "powerbi", "figma", "photoshop",
+    "wordpress", "shopify", "magento", "salesforce", "blockchain", "solidity",
+    "unity", "unreal", "cisco", "wireshark", "nmap", "kubernetes", "docker",
+    "terraform", "ansible", "jenkins", "github", "gitlab", "jira", "scrum",
+}
+
+# Non-IT hobbies / topics — reject as interests (system is IT careers only)
+OFF_TOPIC_INTERESTS = {
+    "cooking", "cricket", "football", "soccer", "basketball", "music", "singing",
+    "sing", "dancing", "dance", "movies", "movie", "sports", "sport", "food",
+    "travel", "travelling", "fashion", "shopping", "gaming", "gamer", "youtube",
+    "tiktok", "instagram", "facebook", "sleeping", "eating", "party", "parties",
+    "cars", "bike", "biking", "photography", "painting", "drawing", "poetry",
+    "novels", "anime", "manga", "fitness", "gym", "yoga", "meditation",
+    "religion", "politics", "farming", "agriculture", "acting", "drama",
+    "theatre", "theater", "hobby", "hobbies", "fun",
+}
+
+
 def _is_garbage_token(token):
     """Reject tokens that look like random keyboard / placeholder junk."""
     t = str(token or "").strip().lower()
+    if t in TECH_TOKEN_ALLOWLIST:
+        return False
     if len(t) < 2:
         return True
     if re.fullmatch(r"(.)\1{2,}", t):  # aaa, xxxx
@@ -723,7 +753,8 @@ def _is_garbage_token(token):
     if re.fullmatch(r"\d+", t):  # only digits
         return True
     # Mostly consonants with no vowel — weak signal of gibberish (short words exempt)
-    if len(t) >= 5 and not re.search(r"[aeiou]", t):
+    # Include 'y' so tokens like mysql are kept even if not in the allowlist
+    if len(t) >= 5 and not re.search(r"[aeiouy]", t):
         return True
     return False
 
@@ -759,19 +790,29 @@ def validate_user_profile_input(user_skills, user_interests):
     tech_skills = [t for t in skill_tokens if t not in SOFT_STOPWORDS]
     real_interests = [t for t in interest_tokens if t not in SOFT_STOPWORDS]
 
+    hobby_as_skills = [t for t in tech_skills if t in OFF_TOPIC_INTERESTS]
+    if hobby_as_skills:
+        return (
+            False,
+            "Skills must be IT/technical (e.g. Python, MySQL, React). "
+            "Do not enter hobbies like sleeping, eating, singing, or dancing as skills.",
+            tech_skills,
+            real_interests or interest_tokens,
+        )
+
     if len(tech_skills) < 2:
         if not skill_tokens:
             return (
                 False,
-                "Please enter at least 2 real technical skills (e.g. Python, HTML, JavaScript). "
-                "Random or placeholder text is not accepted.",
+                "This system recommends IT careers only. Enter at least 2 technical "
+                "IT skills (e.g. Python, MySQL, React, SEO, Java).",
                 tech_skills,
                 real_interests or interest_tokens,
             )
         return (
             False,
-            "Generic words like management, communication, or leadership are not enough. "
-            "Please enter at least 2 technical skills (e.g. Python, SQL, React, Java).",
+            "Soft skills alone are not enough. Enter at least 2 IT technical skills "
+            "(e.g. Python, SQL, React, MySQL, Java, SEO).",
             tech_skills,
             real_interests or interest_tokens,
         )
@@ -779,26 +820,54 @@ def validate_user_profile_input(user_skills, user_interests):
     if len(interest_tokens) < 1:
         return (
             False,
-            "Please enter at least 1 real interest (e.g. Web Development, AI, Cybersecurity).",
+            "Please enter at least 1 IT-related interest "
+            "(e.g. Web Development, DBA, Cybersecurity, SEO, Cloud).",
             tech_skills,
             real_interests,
+        )
+
+    # Block non-IT hobbies (singing, dancing, sports, etc.)
+    off_topic_hits = [
+        t for t in (real_interests or interest_tokens)
+        if t in OFF_TOPIC_INTERESTS
+    ]
+    career_like = [
+        t for t in (real_interests or interest_tokens)
+        if t not in OFF_TOPIC_INTERESTS and t not in SOFT_STOPWORDS
+    ]
+    if off_topic_hits and not career_like:
+        return (
+            False,
+            "This system recommends IT careers only. Interests like singing, dancing, "
+            "sports, or cooking are not accepted. Use IT interests such as Web Development, "
+            "AI, DBA, SEO, or Cybersecurity.",
+            tech_skills,
+            real_interests or interest_tokens,
         )
 
     skill_vocab = _skill_vocabulary()
     interest_vocab = _interest_vocabulary()
 
-    known_tech_skills = [t for t in tech_skills if t in skill_vocab]
+    known_tech_skills = [
+        t for t in tech_skills
+        if t in skill_vocab or t in TECH_TOKEN_ALLOWLIST
+    ]
+    # Prefer dataset vocabulary; fall back to allowlist so new IT skills still pass
+    if len([t for t in tech_skills if t in skill_vocab]) >= 2:
+        known_tech_skills = [t for t in tech_skills if t in skill_vocab]
+
     known_interests = [
         t for t in (real_interests or interest_tokens)
-        if t in interest_vocab or t in skill_vocab
+        if t not in OFF_TOPIC_INTERESTS
+        and (t in interest_vocab or t in skill_vocab or t in TECH_TOKEN_ALLOWLIST)
     ]
 
     if len(known_tech_skills) < 2:
         return (
             False,
-            "Your skills do not match technical careers in our system. "
-            "Please use recognizable tech skills such as Python, Java, HTML, CSS, "
-            "JavaScript, React, or SQL.",
+            "Your skills do not match IT careers in our system. "
+            "Please use recognizable technical skills such as Python, Java, HTML, CSS, "
+            "JavaScript, React, SQL, MySQL, SEO, or Docker.",
             tech_skills,
             real_interests or interest_tokens,
         )
@@ -806,9 +875,10 @@ def validate_user_profile_input(user_skills, user_interests):
     if len(known_interests) < 1:
         return (
             False,
-            "Your interests do not match tech careers in our system. "
-            "Please enter career-related interests such as Web Development, AI, "
-            "Data Science, Cybersecurity, Mobile Apps, or Cloud — not unrelated topics.",
+            "Your interests do not match IT careers in our system. "
+            "Please enter IT-related interests such as Web Development, AI, "
+            "Data Science, Cybersecurity, DBA, SEO, Mobile Apps, or Cloud — "
+            "not unrelated topics like singing or dancing.",
             tech_skills,
             real_interests or interest_tokens,
         )
@@ -1029,6 +1099,33 @@ if __name__ == '__main__':
     print("Populating database...")
     populate_career_metadata(CSV_PATH)
 
-    startup_and_validate(CSV_PATH, epochs=5)
+    # Fast path: train once so /predict is available quickly.
+    # Multi-epoch accuracy is slow on 15k rows — use evaluate_model.py
+    # or set CAREER_EVAL_EPOCHS=5 when you want startup evaluation.
+    if not os.path.exists(CSV_PATH):
+        print(f"File Not Found: {CSV_PATH}", flush=True)
+    else:
+        df = pd.read_csv(CSV_PATH)
+        df.columns = df.columns.str.strip()
+        if "Recommended_Career" in df.columns:
+            print(
+                f"Training recommendation engine on {len(df)} rows / "
+                f"{df['Recommended_Career'].nunique()} careers...",
+                flush=True,
+            )
+            engine.fit(df, "Recommended_Career")
+            print("Model ready. API: http://127.0.0.1:5002/predict", flush=True)
+        else:
+            print("Error: Recommended_Career column missing in CSV.", flush=True)
+
+    eval_epochs = int(os.getenv("CAREER_EVAL_EPOCHS", "0"))
+    if eval_epochs > 0:
+        startup_and_validate(CSV_PATH, epochs=eval_epochs)
+    else:
+        print(
+            "Skipping multi-epoch accuracy at startup (keeps server fast). "
+            "For metrics run: python evaluate_model.py 5",
+            flush=True,
+        )
 
     app.run(port=5002, debug=False)

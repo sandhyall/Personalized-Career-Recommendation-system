@@ -13,9 +13,9 @@ const Footer = () => {
           <div className="flex items-center gap-2 text-white font-bold text-xl">
             <img src={logo} alt="" className="h-14 w-auto" />
           </div>
-          <p className="text-sm leading-relaxed">
-            Personalized career roadmaps powered by your skills and interests.
-            Navigate your professional future with confidence.
+          <p  className="text-bold leading-relaxed">
+            Find the Right Career Path for You
+
           </p>
         </div>
 

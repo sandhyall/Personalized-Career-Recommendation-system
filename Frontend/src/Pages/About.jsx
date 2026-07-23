@@ -1,25 +1,25 @@
 import React from "react";
-import { Target, Cpu, TrendingUp, Users } from "lucide-react";
+import { Target, Cpu, TrendingUp } from "lucide-react";
 
 const AboutUs = () => {
   const features = [
     {
       icon: <Cpu className="w-8 h-8 text-blue-500" />,
-      title: "Data-Driven Precision",
+      title: "Skill-based matching",
       description:
-        "Our recommendation engine uses advanced data mining to match your unique profile with market demands.",
+        "The system compares your skills and interests with career profiles in our dataset.",
     },
     {
       icon: <Target className="w-8 h-8 text-indigo-500" />,
-      title: "Personalized Mapping",
+      title: "Personalized suggestions",
       description:
-        "We don't just find jobs; we map out long-term career trajectories tailored to your specific skill set.",
+        "You get the top three career options that best fit your input, with a match score.",
     },
     {
       icon: <TrendingUp className="w-8 h-8 text-emerald-500" />,
-      title: "Market Insights",
+      title: "Learning path",
       description:
-        "Stay ahead of the curve with real-time analysis of the evolving digital economy and emerging roles.",
+        "Each recommended career includes resources, practice tasks, and a sample project.",
     },
   ];
 
@@ -28,15 +28,12 @@ const AboutUs = () => {
       <section className="py-20  border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6 text-center">
           <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6">
-            Bridging the Gap Between{" "}
-            <span className="text-blue-600">Ambition</span> and{" "}
-            <span className="text-indigo-600">Opportunity</span>
+            Personalized Career Recommendation System
           </h1>
           <p className=" max-w-3xl mx-auto leading-relaxed">
-            In an era of rapid digital transformation, choosing a career path
-            shouldn't be a guessing game. We leverage modern web technologies to
-            help the next generation navigate their professional journey with
-            absolute confidence.
+            This project helps students explore IT career options based on their
+            skills, interests, and academic background. It is built as a
+            full-stack web application with a Python recommendation engine.
           </p>
         </div>
       </section>
@@ -61,22 +58,22 @@ const AboutUs = () => {
       <section className="py-16 bg-indigo-900 text-white overflow-hidden">
         <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
           <div>
-            <h2 className="text-3xl font-bold mb-6">Our Vision</h2>
+            <h2 className="text-3xl font-bold mb-6">About the project</h2>
             <p className="text-indigo-100 mb-4">
-              We started with a simple question: How can we make career guidance
-              accessible, objective, and deeply personal?
+              Many students find it hard to choose a career when there are so
+              many technical roles available. Generic advice often ignores the
+              skills a person already has.
             </p>
             <p className="text-indigo-100">
-              By integrating full-stack development with robust data
-              warehousing, we've built a platform that serves as a virtual
-              career consultant—available 24/7 to help students and
-              professionals optimize their potential in the modern workforce.
+              Our system uses content-based filtering and heuristic scoring to
+              recommend suitable IT careers and show a possible next step on a
+              career path.
             </p>
           </div>
           <div className="bg-indigo-800/50 p-8 rounded-3xl border border-indigo-700">
             <blockquote className="text-2xl italic font-light">
-              "The best way to predict your future is to create it. We provide
-              the data; you provide the drive."
+              "Enter your skills and interests, get ranked career suggestions,
+              then follow learning and practice steps for the role you choose."
             </blockquote>
           </div>
         </div>

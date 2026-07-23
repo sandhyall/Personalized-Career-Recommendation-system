@@ -45,7 +45,7 @@ const Navbar = () => {
         My Results
       </Link>
       <Link to="/get-started" className="text-gray-700 font-medium hover:text-indigo-600 transition">
-        Retake Quiz
+        Retake Assessment
       </Link>
       <Link to="/dashboard/profile" className="text-gray-700 font-medium hover:text-indigo-600 transition">
         Profile

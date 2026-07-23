@@ -1,23 +1,3 @@
-"""
-Build the IT Career Guidance dataset (student survey format).
-
-Output: personalized/data/career_dataset.csv
-
-Columns match the student assessment form:
-  Name, Strength, Education, Skills, Interests, Recommended_Career
-
-The dataset models realistic student diversity: focused specialists, mixed-skill
-learners, generalists, career explorers, and early-stage profiles with partial
-skill overlap across related IT careers.
-
-Evaluation (80/20 holdout, 5-run mean on this dataset):
-  Top-1 Accuracy : 70.52%
-  Top-3 Accuracy : 86.81%
-  F1-Score       : 0.729
-
-Run:  python generate_dataset.py
-"""
-
 import csv
 import os
 import random

@@ -248,6 +248,13 @@ const CareerPage = () => {
     }
   };
 
+  const normalizeUrl = (raw) => {
+    if (!raw) return "";
+    let u = String(raw).trim().toLowerCase();
+    u = u.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/+$/, "");
+    return u;
+  };
+
   const submitChallengeGithub = async (ch) => {
     if (!entry || !isLoggedIn()) return;
     const id = ch.id || ch.title;
@@ -257,6 +264,46 @@ const CareerPage = () => {
       setSubmitMsg("Enter a GitHub repository URL for this challenge.");
       return;
     }
+
+    const ghNorm = normalizeUrl(url);
+    const demoNorm = normalizeUrl(demo);
+    if (demoNorm && ghNorm === demoNorm) {
+      setSubmitMsg("GitHub and live demo must be different URLs for this challenge.");
+      return;
+    }
+
+    // Block reusing the same GitHub / live demo across other practice challenges
+    const otherSubs = Object.entries(challengeSubsById).filter(
+      ([otherId]) => String(otherId) !== String(id)
+    );
+    for (const [, sub] of otherSubs) {
+      if (!sub) continue;
+      if (ghNorm && normalizeUrl(sub.githubUrl) === ghNorm) {
+        setSubmitMsg(
+          "Do not reuse the same GitHub link for multiple practice challenges. Each challenge needs its own unique GitHub repository."
+        );
+        return;
+      }
+      if (demoNorm && normalizeUrl(sub.liveDemoUrl) === demoNorm) {
+        setSubmitMsg(
+          "Do not reuse the same live demo link for multiple practice challenges. Each challenge needs its own unique live demo URL."
+        );
+        return;
+      }
+      if (ghNorm && normalizeUrl(sub.liveDemoUrl) === ghNorm) {
+        setSubmitMsg(
+          "This GitHub link was already used as a live demo on another practice challenge. Use a different unique URL."
+        );
+        return;
+      }
+      if (demoNorm && normalizeUrl(sub.githubUrl) === demoNorm) {
+        setSubmitMsg(
+          "This live demo link was already used as a GitHub link on another practice challenge. Use a different unique URL."
+        );
+        return;
+      }
+    }
+
     setChallengeBusy(id);
     setSubmitMsg("");
     try {
@@ -695,9 +742,10 @@ const CareerPage = () => {
                 <h3 className="text-xl font-bold text-slate-800">Practice Challenges</h3>
               </div>
               <p className="text-sm text-slate-500 mt-1">
-                Submit a GitHub link for <strong>every</strong> challenge. The next career
-                path unlocks only after <strong>all</strong> challenges and the final
-                project are approved by an admin.
+                Submit a <strong>unique</strong> GitHub link (and live demo if any) for{" "}
+                <strong>every</strong> challenge — do not reuse the same repository or demo
+                URL across challenges. The next career path unlocks only after{" "}
+                <strong>all</strong> challenges and the final project are approved by an admin.
               </p>
             </div>
           </div>

@@ -7,6 +7,63 @@ function challengeKey(ch) {
   return String(ch?.id || ch?.title || "").trim();
 }
 
+/** Normalize URLs so trailing slashes / protocol / www do not bypass uniqueness. */
+function normalizeSubmissionUrl(raw) {
+  if (!raw) return "";
+  let u = String(raw).trim().toLowerCase();
+  if (!u) return "";
+  u = u.replace(/^https?:\/\//, "");
+  u = u.replace(/^www\./, "");
+  u = u.replace(/\/+$/, "");
+  return u;
+}
+
+/**
+ * Each practice challenge must use a unique GitHub repo and unique live demo.
+ * Returns an error message string, or null if OK.
+ */
+function duplicateChallengeLinkError(
+  careerProjects,
+  { githubUrl, liveDemoUrl, challengeId }
+) {
+  const gh = normalizeSubmissionUrl(githubUrl);
+  const demo = normalizeSubmissionUrl(liveDemoUrl);
+  const others = (careerProjects || []).filter(
+    (p) =>
+      p.submissionType === "challenge" &&
+      String(p.challengeId) !== String(challengeId) &&
+      ["pending_review", "approved", "in_progress", "rejected"].includes(
+        p.status
+      )
+  );
+
+  for (const p of others) {
+    if (gh && normalizeSubmissionUrl(p.githubUrl) === gh) {
+      return "Do not reuse the same GitHub link for multiple practice challenges. Each challenge needs its own unique GitHub repository.";
+    }
+    if (
+      demo &&
+      normalizeSubmissionUrl(p.liveDemoUrl) &&
+      normalizeSubmissionUrl(p.liveDemoUrl) === demo
+    ) {
+      return "Do not reuse the same live demo link for multiple practice challenges. Each challenge needs its own unique live demo URL.";
+    }
+    // Cross-check: github of one challenge must not match demo of another
+    if (gh && normalizeSubmissionUrl(p.liveDemoUrl) === gh) {
+      return "This GitHub link was already used as a live demo on another practice challenge. Use a different unique URL.";
+    }
+    if (demo && normalizeSubmissionUrl(p.githubUrl) === demo) {
+      return "This live demo link was already used as a GitHub link on another practice challenge. Use a different unique URL.";
+    }
+  }
+
+  if (gh && demo && gh === demo) {
+    return "GitHub and live demo must be different URLs for this challenge.";
+  }
+
+  return null;
+}
+
 /** Watch + docs + every practice challenge has an approved GitHub submission. */
 function resourcesComplete(entry, projectsForCareer = []) {
   const watchOk = Boolean(entry.completedResources?.watch);
@@ -402,6 +459,16 @@ const submitProject = async (req, res) => {
           error: "Complete Watch Guide and Documentation before submitting challenges",
         });
       }
+
+      const dupMsg = duplicateChallengeLinkError(careerProjects, {
+        githubUrl,
+        liveDemoUrl: demo,
+        challengeId,
+      });
+      if (dupMsg) {
+        return res.status(400).json({ error: dupMsg });
+      }
+
       // Replace prior pending/rejected for same challenge
       await Project.deleteMany({
         studentId: userId,
@@ -500,6 +567,24 @@ const resubmitProject = async (req, res) => {
     if (projectTitle) project.projectTitle = String(projectTitle).trim();
     if (githubUrl) project.githubUrl = String(githubUrl).trim();
     if (demo) project.liveDemoUrl = String(demo).trim();
+
+    if (project.submissionType === "challenge") {
+      const siblings = await Project.find({
+        studentId: project.studentId,
+        careerSlug: project.careerSlug,
+        submissionType: "challenge",
+        _id: { $ne: project._id },
+      }).lean();
+      const dupMsg = duplicateChallengeLinkError(siblings, {
+        githubUrl: project.githubUrl,
+        liveDemoUrl: project.liveDemoUrl,
+        challengeId: project.challengeId,
+      });
+      if (dupMsg) {
+        return res.status(400).json({ error: dupMsg });
+      }
+    }
+
     if (req.file) project.screenshot = `/uploads/${req.file.filename}`;
     project.status = "pending_review";
     project.feedback = "";
@@ -512,16 +597,18 @@ const resubmitProject = async (req, res) => {
     if (doc) {
       const entry = doc.careerPath.find((c) => c.slug === project.careerSlug);
       if (entry) {
-        entry.project = {
-          status: "pending_review",
-          githubUrl: project.githubUrl,
-          demoUrl: project.liveDemoUrl,
-          screenshotUrl: project.screenshot,
-          submittedAt: project.submittedAt,
-          title: project.projectTitle,
-          feedback: "",
-          projectId: String(project._id),
-        };
+        if (project.submissionType !== "challenge") {
+          entry.project = {
+            status: "pending_review",
+            githubUrl: project.githubUrl,
+            demoUrl: project.liveDemoUrl,
+            screenshotUrl: project.screenshot,
+            submittedAt: project.submittedAt,
+            title: project.projectTitle,
+            feedback: "",
+            projectId: String(project._id),
+          };
+        }
         const { bySlug } = await loadProjectsGrouped(project.studentId);
         summarizeWithProjects(doc, bySlug);
         doc.markModified("careerPath");
